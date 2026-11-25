@@ -89,3 +89,5 @@ after FY2024 is loaded, those blocks show a dashed "Written for FY2024 data" bad
 - The calculation engine reproduces the Excel check workbook: 160 statement lines and 224 ratio cells, no difference.
 - All model checks tie to the cent in all five years (net income, total assets, balance, equity roll-forward, cash flow).
 - Both pages were opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.
+
+- 
