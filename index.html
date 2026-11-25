@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yazio finance workspace</title>
+<style>
+:root{--bg:#f3f5f6;--card:#fff;--fg:#14202b;--muted:#566573;--line:#d9e0e5;--accent:#0e6e68}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#172027;--fg:#e6ecf0;--muted:#9aa9b5;--line:#2a3741;--accent:#4fc1b8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:32px 16px}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:clamp(26px,5vw,38px);margin:0 0 8px;letter-spacing:-.02em}
+p{color:var(--muted);margin:0 0 18px}
+a.card{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 12px;text-decoration:none;color:var(--fg)}
+a.card:hover{border-color:var(--accent)}
+a.card b{display:block;font-size:18px;color:var(--accent)}
+a.card span{color:var(--muted);font-size:14.5px}
+small{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Yazio finance workspace</h1>
+  <p id="status">Loading data...</p>
+  <a class="card" href="cockpit.html"><b>Finance cockpit</b><span>Dashboard for the CFO, FP&amp;A and the Controller: trends, growth check, forecast bias, result bridge, scenario model, ratios and model checks.</span></a>
+  <a class="card" href="prep.html"><b>Interview preparation</b><span>Business story, numbers, role fit and the questions for the CFO. Charts and figures follow the data file.</span></a>
+  <p><small>Both pages read the same file, data/years.js. Add a year there and everything updates. Add ?to=2023 to a page address to see it with fewer years.</small></p>
+</div>
+<script src="data/years.js"></script>
+<script src="js/calc.js"></script>
+<script>
+try{var y=YAZIO_CALC.load(window.YAZIO_DATA).years;document.getElementById('status').textContent='Annual statements loaded: '+y.map(function(c){return 'FY'+c.fy}).join(', ')+'. All model checks tie: '+(y.every(function(c){return Math.abs(c.chk_ni)<1&&Math.abs(c.chk_bs)<1&&Math.abs(c.chk_ocf)<1&&Math.abs(c.chk_equity)<1})?'yes.':'NO, see the cockpit.');}catch(e){document.getElementById('status').textContent='Could not read data/years.js.'}
+</script>
+</body>
+</html>
