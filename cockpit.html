@@ -90,7 +90,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
   <div class="top">
    <h1>YAZIO finance cockpit<small id="asof"></small></h1>
    <div class="tabs" role="tablist" id="tabs"></div>
-   <span><a href="index.html">Home</a> · <a href="prep.html">Interview prep</a> <button class="btn" id="theme" aria-label="Toggle light or dark theme">Theme</button></span>
+   <span><a href="index.html">Home</a> <button class="btn" id="theme" aria-label="Toggle light or dark theme">Theme</button></span>
   </div>
   <div class="filters" id="filters"></div>
  </div>
@@ -104,11 +104,10 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
 <div id="tip"></div>
 
 <script src="data/years.js"></script>
-<script src="data/casestudy.js"></script>
 <script src="js/calc.js"></script>
 <script>
 "use strict";
-var CALC=window.YAZIO_CALC,fm=CALC.fmt,CASE=window.YAZIO_CASE;
+var CALC=window.YAZIO_CALC,fm=CALC.fmt,CASE=window.YAZIO_CASE||{};
 var qs=new URLSearchParams(location.search);
 var LD=CALC.load(window.YAZIO_DATA,{from:+qs.get("from")||0,to:+qs.get("to")||0});
 var Y=LD.years,N=Y.length;
@@ -465,12 +464,12 @@ function obsCard(){
 }
 
 /* ---------- shell ---------- */
-var ROLES=[["cfo","CFO"],["fpa","FP&A"],["ratios","Ratios and checks"],["controller","Controller"]];
+var ROLES=[["cfo","CFO"],["fpa","FP&A"],["ratios","Ratios and checks"]];
 function render(){
   $("#asof").textContent="Statutory data "+FY[0]+(N>1?"–"+FY[N-1]:"")+" · "+N+" year"+(N>1?"s":"")+" loaded";
   $("#tabs").replaceChildren(...ROLES.map(function(r){var b=h("button",{class:"tab",role:"tab","aria-selected":st.role===r[0]},r[1]);b.onclick=function(){st.role=r[0];render();scrollTo(0,0);};return b;}));
   buildFilters();
-  $("#main").replaceChildren(({cfo:viewCFO,fpa:viewFPA,ratios:viewRatios,controller:viewController})[st.role]());
+  $("#main").replaceChildren(({cfo:viewCFO,fpa:viewFPA,ratios:viewRatios})[st.role]());
 }
 $("#theme").onclick=function(){var r=document.documentElement,cur=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");r.setAttribute("data-theme",cur==="dark"?"light":"dark");};
 render();

@@ -1,25 +1,22 @@
 # Yazio finance workspace
 
-Two static pages built on one data file:
+A static dashboard built on one data file:
 
 | Page | What it is |
 |---|---|
-| `cockpit.html` | Dashboard for the CFO, FP&A and the Controller: KPIs, trends, growth check, forecast bias (guidance vs actual), result bridge, scenario model, 50+ ratios, model checks, and the case-study controller view (mock data). |
-| `prep.html` | Interview preparation for the CFO conversation: business story, numbers, role fit, questions. |
+| `cockpit.html` | Dashboard for the CFO and FP&A: KPIs, trends, growth check, forecast bias (guidance vs actual), result bridge, scenario model, 50+ ratios and model checks. |
 | `index.html` | Landing page. It also shows which years are loaded and whether the model ties. |
 
 No build step, no server, no dependencies. Open the files in a browser, or publish the folder with GitHub Pages
-(Settings > Pages > Deploy from branch > `main` / root). The prep page loads web fonts from Google Fonts and falls back to system fonts offline.
+(Settings > Pages > Deploy from branch > `main` / root). 
 
 ## How it is built
 
 ```
 data/years.js       The only place with statement numbers. One entry per year.
-data/casestudy.js   Case-study mock data and audit-readiness observations (static).
 js/calc.js          Turns the raw lines into every derived figure: comparable P&L, derived cash flow,
                     51 ratios, checks. Works for 1 to n years. Nothing typed in.
 cockpit.html        Reads data and calc, draws charts with plain SVG.
-prep.html           Same, plus the questions list (edit in the script at the bottom).
 tests/verify.js     node tests/verify.js : checks that the model ties to the filed statements.
 ```
 
@@ -61,12 +58,10 @@ Starting with FY2020 to FY2023 and adding FY2024 later is exactly this procedure
 
 ## What is static (and how the pages tell you)
 
-Numbers, charts, tables, ratios and the growth/cash/ROE sentences follow the data. Analyst commentary that cites specific years
-(the "What happened" paragraph, the question list, the risk ratings from the FY2024 report) is typed text. When data for a year
-after FY2024 is loaded, those blocks show a dashed "Written for FY2024 data" badge so stale text is visible. Update them by hand.
+Numbers, charts, tables and ratios follow the data. The risk ratings come from the FY2024 management report and are typed text; when data for a year after FY2024 is loaded they show a dashed "FY2024 report" badge. Update them by hand.
 
 ## Checks that were run
 
 - The calculation engine reproduces the Excel check workbook: 160 statement lines and 224 ratio cells, no difference.
 - All model checks tie to the cent in all five years (net income, total assets, balance, equity roll-forward, cash flow).
-- Both pages were opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.
+- The dashboard was opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.
