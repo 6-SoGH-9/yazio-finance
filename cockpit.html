@@ -97,8 +97,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
 </header>
 <main class="wrap" id="main"></main>
 <footer class="wrap">
- Sources: YAZIO GmbH annual financial statements (HGB, Unternehmensregister extracts) and the take-home case study submission.
- Case-study figures are mock data per the case brief. Items marked "inference" or "unverified" are analysis, not company statements.
+ Sources: YAZIO GmbH annual financial statements (HGB, Unternehmensregister extracts).
  All statement figures come from data/years.js; add a year there and everything on this page updates.
 </footer>
 <div id="tip"></div>
@@ -107,7 +106,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
 <script src="js/calc.js"></script>
 <script>
 "use strict";
-var CALC=window.YAZIO_CALC,fm=CALC.fmt,CASE=window.YAZIO_CASE||{};
+var CALC=window.YAZIO_CALC,fm=CALC.fmt;
 var qs=new URLSearchParams(location.search);
 var LD=CALC.load(window.YAZIO_DATA,{from:+qs.get("from")||0,to:+qs.get("to")||0});
 var Y=LD.years,N=Y.length;
@@ -203,7 +202,7 @@ function buildFilters(){
     f.append(h("label",{},"From FY",sel(st.from,function(v){st.from=Math.min(v,st.to);render();})),h("label",{},"To FY",sel(st.to,function(v){st.to=Math.max(v,st.from);render();})));
     var b=h("button",{class:"chip","aria-pressed":st.basis==="comparable",title:"Until FY2021 the app-store fees were netted inside gross profit; from FY2022 they are in other operating expenses. Comparable basis adds them back for the earlier years. EBIT and net income do not change."},st.basis==="comparable"?"Comparable (fees in other opex)":"As filed");
     b.onclick=function(){st.basis=st.basis==="comparable"?"filed":"comparable";render();};f.append(h("label",{},"Basis",b));
-  }else f.append(h("span",{class:"small"},"June 2026 close cockpit from the case study (mock data), plus audit-readiness observations from the statutory accounts."));
+  }
 }
 
 /* ---------- CFO ---------- */
@@ -384,83 +383,6 @@ function viewRatios(){
   root.append(h("h3",{class:"sec"},"Derived cash flow (no cash flow statement is published), €m"),h("div",{class:"card"},h("div",{class:"scroll"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Line"),...I.map(function(i){return h("th",{class:"n"},Y[i].label)}))),
     h("tbody",{},...ocf.map(function(k){return h("tr",{},h("td",{},k[0]),...I.map(function(i){return h("td",{class:"n"},m1(Y[i][k[1]]))}))}))))));
   return root;
-}
-
-/* ---------- Controller (case study, mock data) ---------- */
-function viewController(){
-  var root=h("div",{}),open=CASE.CTRL.filter(function(x){return x.j==="Open"});
-  root.append(h("div",{class:"note warn"},h("b",{},"Mock data. "),"All case-study figures below are mock per the case brief. Statutory observations at the bottom come from the real filed accounts."));
-  root.append(h("div",{class:"grid g4"},
-    kpi("Controls open (June)",open.length+" of "+CASE.CTRL.length,h("span",{class:"down"},open.filter(function(x){return x.sev==="High"}).length+" High, "+open.filter(function(x){return x.sev==="Medium"}).length+" Medium")),
-    kpi("Recurring gap",CASE.CTRL.filter(function(x){return x.a==="Open"&&x.m==="Open"&&x.j==="Open"}).length+" control","Vendor master check: 3 months running"),
-    kpi("June accrual and corrections",eur(54200+43803.28),"Accrual + prepaid correction, awaiting sign-off"),
-    kpi("Card reconciliation",eur(3775),"Platform total; variance to zero after 3 adjustments")));
-  root.append(h("h3",{class:"sec"},"AP control register"),ctrlCard());
-  root.append(h("h3",{class:"sec"},"June close entries (prepared, not posted)"),entryCard());
-  root.append(h("h3",{class:"sec"},"Budget vs actual, CC 225100"),bvaCard());
-  root.append(h("h3",{class:"sec"},"VAT treatment, July batch"),vatCard());
-  root.append(h("h3",{class:"sec"},"Prepaid schedule"),prepaidCard());
-  root.append(h("h3",{class:"sec"},"Audit-readiness observations from the statutory accounts"),obsCard());
-  return root;
-}
-function ctrlCard(){
-  var wrap=h("div",{class:"card"});
-  var draw=function(){
-    var fl=["All","Open","Done"].map(function(v){var b=h("button",{class:"chip","aria-pressed":st.ctrlFilter===v},v);b.onclick=function(){st.ctrlFilter=v;draw();};return b;});
-    var rows=CASE.CTRL.filter(function(x){return st.ctrlFilter==="All"||x.j===st.ctrlFilter});
-    wrap.replaceChildren(h("div",{class:"filters",style:"padding:0 0 8px"},...fl,h("span",{class:"small"},"June status judged on June evidence, not carried from earlier months. Severity is my suggestion.")),
-     h("div",{class:"scroll"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Control"),h("th",{},"Apr"),h("th",{},"May"),h("th",{},"Jun"),h("th",{},"Severity"),h("th",{},"Comment"))),
-      h("tbody",{},...rows.map(function(x){return h("tr",{},h("td",{},x.c),h("td",{},stTag(x.a)),h("td",{},stTag(x.m)),h("td",{},stTag(x.j)),h("td",{},x.j==="Open"?sevTag(x.sev):"–"),h("td",{class:"small"},x.note))})))));
-  };draw();return wrap;
-}
-function entryCard(){
-  return h("div",{class:"card"},h("div",{class:"scroll"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Entry"),h("th",{},"Debit"),h("th",{},"Credit"),h("th",{class:"n"},"Amount"),h("th",{},"Confidence"),h("th",{},"Status"),h("th",{},"Basis"))),
-   h("tbody",{},...CASE.ENTRIES.map(function(x){return h("tr",{},h("td",{},x.t),h("td",{class:"small"},x.dr),h("td",{class:"small"},x.cr),h("td",{class:"n"},eur2(x.amt)),h("td",{},tag(x.conf,x.conf==="High"?"good":"warn")),h("td",{class:"small"},x.st),h("td",{class:"small"},x.why))})))),
-   h("p",{class:"small"},"Posting and sign-off stay with the Senior Controller. Net June ad expense after rebate: "+eur(54200-8185)+" (of which "+eur(5475)+" is catch-up for April and May)."));
-}
-function bvaCard(){
-  var wrap=h("div",{class:"card"}),BVA=CASE.BVA;
-  var draw=function(){
-    var ms=BVA.months,adj=st.rebate?8185:0;
-    var adA=BVA.ad.a.map(function(v,i){return i===3?v-adj:v}),tb=BVA.ad.b.map(function(v,i){return v+BVA.mt.b[i]}),ta=adA.map(function(v,i){return v+BVA.mt.a[i]});
-    var tg=h("button",{class:"chip","aria-pressed":st.rebate},"Show June after the €8,185 rebate credit");tg.onclick=function(){st.rebate=!st.rebate;draw();};
-    var j=3,vAd=adA[j]-BVA.ad.b[j],vTot=ta[j]-tb[j];
-    wrap.replaceChildren(h("div",{class:"filters",style:"padding:0 0 8px"},tg,h("span",{class:"small"},"Open question for the budget owner: is the €63.0k before or after the rebate and the Ad Expenses 2 correction?")),
-     chartCard("Total cost centre: budget vs actual","€K",{cats:ms,series:[{name:"Budget",color:"var(--s1)",values:tb.map(function(v){return v/1000})},{name:"Actual",color:"var(--s2)",values:ta.map(function(v){return v/1000})}],fmt:function(v){return "€"+v.toFixed(1)+"k"},axis:function(v){return v.toFixed(0)},labels:true,height:230}),
-     h("p",{},"June: Ad Expenses 1 "+eur(adA[j])+" vs budget "+eur(BVA.ad.b[j])+" ("+(vAd>=0?"+":"−")+eur(Math.abs(vAd))+", "+pc(vAd/BVA.ad.b[j])+"); Martech "+eur(BVA.mt.a[j])+" vs "+eur(BVA.mt.b[j])+" ("+eur(BVA.mt.a[j]-BVA.mt.b[j])+"); cost centre "+eur(ta[j])+" vs "+eur(tb[j])+" ("+(vTot>=0?"+":"−")+eur(Math.abs(vTot))+", "+pc(vTot/tb[j])+")."),
-     h("p",{class:"small"},"Explanation: vendor rate card up about 15% since mid-May (about €7.8k); rest front-loaded campaign spend. Martech: €4.0k renewal deferred to July (timing), €3.5k unexplained pending owner confirmation."));
-  };draw();return wrap;
-}
-function vatCard(){
-  var VAT=CASE.VAT,rc=VAT.filter(function(v){return v.tr==="Reverse charge"}),base=rc.reduce(function(a,v){return a+v.net},0),selfV=rc.reduce(function(a,v){return a+v.amt},0);
-  return h("div",{class:"card"},h("div",{class:"scroll"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Vendor"),h("th",{},"Country"),h("th",{class:"n"},"Net"),h("th",{},"Treatment"),h("th",{class:"n"},"VAT"),h("th",{},"Rationale"))),
-   h("tbody",{},...VAT.map(function(v){return h("tr",{},h("td",{},v.v),h("td",{},v.ctry),h("td",{class:"n"},eur(v.net)),h("td",{},tag(v.tr,v.tr==="Reverse charge"?"warn":"good")),h("td",{class:"n"},v.amt==null?"per customs":eur2(v.amt)),h("td",{class:"small"},v.vat))})))),
-   h("p",{class:"small"},"Reverse-charge base "+eur(base)+", self-assessed VAT "+eur2(selfV)+", deductible in the same period so the net VAT effect is nil. Documentation pack for the tax advisor: Irish hosting invoice (VIES check, contract, ledger lines) and Swiss import (customs assessment)."));
-}
-function prepaidCard(){
-  var wrap=h("div",{class:"card"}),PRE=CASE.PRE,mname=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  var calc=function(c,m){var s0=+c.s.slice(5)-1,mo=c.d,mon=c.tot/mo,k=Math.min(Math.max(m-s0+1,0),mo);return {exp:(m>=s0&&m<s0+mo)?mon:0,bal:c.tot-mon*k};};
-  var draw=function(){
-    var m=st.preM,sl=slider("Month-end",0,11,1,m,function(v){return mname[v]+" 2026"},function(v){st.preM=v;draw();});
-    var ty=["All","Software","Insurance"].map(function(v){var b=h("button",{class:"chip","aria-pressed":st.preType===v},v);b.onclick=function(){st.preType=v;draw();};return b;});
-    var rows=PRE.filter(function(c){return st.preType==="All"||c.t===st.preType});
-    var te=rows.reduce(function(a,c){return a+calc(c,m).exp},0),tb=rows.reduce(function(a,c){return a+calc(c,m).bal},0);
-    var series=mname.map(function(_,k){return rows.reduce(function(a,c){return a+calc(c,k).bal},0)/1000});
-    wrap.replaceChildren(h("div",{class:"filters",style:"padding:0 0 8px"},...ty,h("div",{style:"min-width:230px"},sl)),
-      h("div",{class:"grid g4",style:"margin-bottom:10px"},kpi("Expense in "+mname[m],eur(te),""),kpi("Prepaid balance, "+mname[m]+" month-end",eur(tb),"")),
-      chartCard("Prepaid balance by month-end","€K. Balance stays at full value until amortisation starts (stated assumption); whole months from the 1st.",{cats:mname,series:[{name:"Balance",color:"var(--s1)",values:series}],fmt:function(v){return "€"+v.toFixed(1)+"k"},axis:function(v){return v.toFixed(0)},labels:false,height:220}),
-      h("div",{class:"scroll"},h("table",{style:"margin-top:8px"},h("thead",{},h("tr",{},h("th",{},"Contract"),h("th",{},"Type"),h("th",{},"Start"),h("th",{class:"n"},"Per month"),h("th",{class:"n"},"Expense"),h("th",{class:"n"},"Balance"))),
-        h("tbody",{},...rows.map(function(c){var r=calc(c,m);return h("tr",{},h("td",{},c.n),h("td",{},c.t),h("td",{},c.s),h("td",{class:"n"},eur(c.tot/c.d)),h("td",{class:"n"},eur(r.exp)),h("td",{class:"n"},eur(r.bal)));})))));
-  };draw();return wrap;
-}
-function obsCard(){
-  var wrap=h("div",{class:"card"});
-  var draw=function(){
-    var fl=["All","High","Medium","Low"].map(function(v){var b=h("button",{class:"chip","aria-pressed":st.obsSev===v},v);b.onclick=function(){st.obsSev=v;draw();};return b;});
-    var rows=CASE.OBS.filter(function(o){return st.obsSev==="All"||o.sev===st.obsSev});
-    wrap.replaceChildren(h("div",{class:"filters",style:"padding:0 0 8px"},...fl,h("span",{class:"small"},"Severity is my judgement. Status: Known = explained in the documents, Question = needs an answer, Confirm = verify the filing.")),
-     ...rows.map(function(o){return h("details",{},h("summary",{},sevTag(o.sev)," ",o.t,"  ",tag(o.st,o.st==="Known"?"good":"warn")),h("p",{},h("b",{},"Evidence: "),o.e),h("p",{},h("b",{},"Action: "),o.act))}));
-  };draw();return wrap;
 }
 
 /* ---------- shell ---------- */

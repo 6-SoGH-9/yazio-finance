@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Add a year from the PDF</title>
+<style>
+:root{--bg:#f3f5f6;--card:#fff;--fg:#14202b;--muted:#566573;--line:#d9e0e5;--accent:#0e6e68;--ok:#1b7a3e;--bad:#b3261e;--warn:#8a5a00;--soft:#eef3f4}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#172027;--fg:#e6ecf0;--muted:#9aa9b5;--line:#2a3741;--accent:#4fc1b8;--ok:#5fcf8a;--bad:#ff8a80;--warn:#e6b450;--soft:#1d2830}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:28px 16px 60px}
+.wrap{max-width:980px;margin:0 auto}
+h1{font-size:clamp(24px,4.5vw,34px);margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:17px;margin:0 0 10px}
+p{margin:0 0 12px;color:var(--muted)}
+a{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:0 0 16px}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:30px 16px;text-align:center;color:var(--muted);cursor:pointer;background:var(--soft)}
+#drop.over{border-color:var(--accent);color:var(--fg)}
+#drop b{color:var(--fg)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{color:var(--muted);font-weight:600;font-size:12.5px}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+ul.w{margin:0 0 10px;padding-left:18px;color:var(--warn)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px}
+label{display:block;font-size:12.5px;color:var(--muted)}
+input,select,button,textarea{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+button{width:auto;cursor:pointer;background:var(--accent);color:#fff;border:0;padding:8px 14px;font-weight:600}
+button.sec{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+textarea{font:12.5px/1.4 ui-monospace,Menlo,Consolas,monospace;min-height:220px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.files div{padding:4px 0;border-bottom:1px solid var(--line);font-size:14px}
+.scroll{overflow-x:auto}
+small{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p><a href="index.html">&larr; Workspace</a></p>
+  <h1>Add a year from the PDF</h1>
+  <p>Drop the annual report PDFs (HGB, as printed in the Unternehmensregister). The page reads the balance sheet and income statement, solves the signs against the printed subtotals, compares with <code>data/years.js</code>, runs the model checks and gives you the year entry and an updated <code>years.js</code>. The PDF never leaves your browser.</p>
+
+  <div class="card">
+    <div id="drop"><b>Drop PDF files here</b> or click to choose them<br><small>One or several. For a year whose report has no income statement (FY2020), also load the next year: its prior-year column holds it.</small></div>
+    <input id="file" type="file" accept="application/pdf" multiple hidden>
+    <div class="files" id="files"></div>
+  </div>
+
+  <div class="card" id="pick" hidden>
+    <h2>Year to build</h2>
+    <div class="row"><select id="fy" style="max-width:220px"></select><span id="srcnote"></span></div>
+    <ul class="w" id="warn"></ul>
+  </div>
+
+  <div class="card" id="lines" hidden>
+    <h2>Statement lines read from the PDF</h2>
+    <p id="linesnote"></p>
+    <div class="scroll"><table id="ltab"></table></div>
+  </div>
+
+  <div class="card" id="manual" hidden>
+    <h2>Fields that are not in the statements</h2>
+    <p>Pre-filled where the management report text allows it. Check them, type the rest. Empty fields are left out of the entry.</p>
+    <div class="grid" id="form"></div>
+  </div>
+
+  <div class="card" id="checks" hidden>
+    <h2>Model checks with this year added</h2>
+    <p id="auto"></p>
+    <div class="scroll"><table id="ctab"></table></div>
+  </div>
+
+  <div class="card" id="out" hidden>
+    <h2>Result</h2>
+    <div class="row">
+      <button id="dl">Download updated years.js</button>
+      <button id="cp" class="sec">Copy the year entry</button>
+      <span id="msg"></span>
+    </div>
+    <p>Replace <code>data/years.js</code> in the repository with the downloaded file (on GitHub: open the file, pencil icon, paste, commit). All pages follow.</p>
+    <textarea id="json" readonly></textarea>
+  </div>
+</div>
+
+<script src="js/vendor/pdf.min.js"></script>
+<script src="data/years.js"></script>
+<script src="js/calc.js"></script>
+<script src="js/extract-core.js"></script>
+<script>
+(function () {
+  "use strict";
+  var X = window.YAZIO_EXTRACT, C = window.YAZIO_CALC, BASE = window.YAZIO_DATA;
+  var $ = function (id) { return document.getElementById(id); };
+  var docs = {};        // fy -> parsed document
+  var entry = null, built = null, selFY = null;
+  if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "js/vendor/pdf.worker.min.js";
+
+  function fmt(v) { return v == null ? "" : (Math.round(v * 100) / 100).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function el(tag, txt, cls) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; }
+
+  /* ---- PDF -> rows ---- */
+  function pageRows(items) {
+    var its = items.filter(function (i) { return i.str && i.str.trim(); }).map(function (i) { return { s: i.str.trim(), x: i.transform[4], r: i.transform[4] + i.width, y: i.transform[5] }; });
+    its.sort(function (a, b) { return b.y - a.y || a.x - b.x; });
+    var rows = [], cur = null;
+    its.forEach(function (i) { if (!cur || Math.abs(cur.y - i.y) > 2.5) { cur = { y: i.y, items: [] }; rows.push(cur); } cur.items.push(i); });
+    return rows.map(function (r) {
+      r.items.sort(function (a, b) { return a.x - b.x; });
+      var lab = [], nums = [];
+      r.items.forEach(function (i) { if (X.isNumToken(i.s)) nums.push({ v: X.parseNum(i.s), pos: i.r }); else lab.push(i.s); });
+      return { label: lab.join(" "), nums: nums };
+    });
+  }
+  async function readPDF(file) {
+    var buf = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: buf }).promise, rows = [];
+    for (var p = 1; p <= pdf.numPages; p++) {
+      var page = await pdf.getPage(p), tc = await page.getTextContent();
+      rows = rows.concat(pageRows(tc.items));
+    }
+    var text = rows.map(function (r) { return r.label + (r.nums.length ? " " + r.nums.map(function (n) { return n.v; }).join(" ") : ""); }).join("\n");
+    return X.parseDocument(rows, text);
+  }
+
+  /* ---- load files ---- */
+  async function handle(files) {
+    var box = $("files");
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i], line = el("div", f.name + " ... ");
+      box.appendChild(line);
+      try {
+        var d = await readPDF(f);
+        if (d.error) { line.textContent = f.name + ": " + d.error; line.className = "bad"; continue; }
+        if (!d.fy) { line.textContent = f.name + ": could not detect the financial year."; line.className = "bad"; continue; }
+        docs[d.fy] = d;
+        var bal = d.balance.cur, tie = Math.abs(bal.total_assets - bal.total_equity_liabilities) < 0.02 && Math.abs(bal.total_assets - bal._assets_computed) < 0.02;
+        line.textContent = "";
+        line.appendChild(el("b", "FY" + d.fy));
+        line.appendChild(document.createTextNode(" - " + f.name + " - balance sheet " + (tie ? "ties" : "does NOT tie") + (d.income ? ", income statement read" : ", no income statement in this report") + " "));
+        line.appendChild(el("span", tie && (!d.income || Math.abs(d.income.cur.ni_diff) < 0.02) ? "ok" : "check", "tag " + (tie ? "ok" : "bad")));
+      } catch (e) { line.textContent = f.name + ": " + e.message; line.className = "bad"; }
+    }
+    refreshYears();
+  }
+  function refreshYears() {
+    var s = {}; Object.keys(docs).forEach(function (k) { s[k] = 1; s[k - 1] = 1; });
+    var ys = Object.keys(docs).map(Number).sort(function (a, b) { return b - a; });
+    var sel = $("fy"), keep = selFY;
+    sel.innerHTML = "";
+    ys.forEach(function (y) { var o = el("option", "FY" + y + (BASE.years.some(function (e) { return e.fy === y; }) ? " (already in years.js: compare / replace)" : " (new)")); o.value = y; sel.appendChild(o); });
+    if (!ys.length) return;
+    sel.value = keep && docs[keep] ? keep : ys[0];
+    $("pick").hidden = false; build();
+  }
+  $("fy").onchange = function () { build(); };
+
+  /* ---- build the entry ---- */
+  /* years already in years.js, plus (unedited) entries built from loaded reports for years that are still missing */
+  var autoNote = [];
+  function workingYears(below) {
+    var ys = BASE.years.slice(), have = {}; ys.forEach(function (e) { have[e.fy] = 1; });
+    var cand = {}; Object.keys(docs).forEach(function (k) { cand[k] = 1; cand[k - 1] = 1; });
+    Object.keys(cand).map(Number).sort(function (a, b) { return a - b; }).forEach(function (fy) {
+      if (have[fy] || fy >= below) return;
+      var b = X.buildEntry(fy, docs[fy], docs[fy + 1], ys.filter(function (e) { return e.fy === fy - 1; })[0]);
+      if (b.entry && b.entry.income) { ys.push(b.entry); have[fy] = 1; autoNote.push(fy); }
+    });
+    return ys.sort(function (a, b) { return a.fy - b.fy; });
+  }
+  function existing(fy) { return BASE.years.find(function (e) { return e.fy === fy; }); }
+  function prevEntry(fy) { return workingYears(fy).find(function (e) { return e.fy === fy - 1; }); }
+  function get(o, path) { return path.split(".").reduce(function (a, k) { return a == null ? a : a[k]; }, o); }
+  function set(o, path, v) { var p = path.split("."), k; for (var i = 0; i < p.length - 1; i++) { k = p[i]; if (o[k] == null || typeof o[k] !== "object") o[k] = {}; o = o[k]; } if (v === "" || v == null || (typeof v === "number" && isNaN(v))) delete o[p[p.length - 1]]; else o[p[p.length - 1]] = v; }
+
+  function build() {
+    selFY = +$("fy").value;
+    built = X.buildEntry(selFY, docs[selFY], docs[selFY + 1], prevEntry(selFY));
+    var ul = $("warn"); ul.innerHTML = "";
+    if (built.error) { ul.appendChild(el("li", built.error)); ["lines", "manual", "checks", "out"].forEach(function (i) { $(i).hidden = true; }); return; }
+    entry = JSON.parse(JSON.stringify(built.entry));
+    var old = existing(selFY);
+    $("srcnote").textContent = "Balance sheet: " + built.sources.balance + ". Income statement: " + (built.sources.income || "not available") + ".";
+    built.warnings.forEach(function (w) { ul.appendChild(el("li", w)); });
+    if (old) {
+      /* keep what was typed before for the fields that are not in the statements */
+      ["flows.loan_paid_out", "balance.loan_in_receivables", "balance.loan_in_financial_assets"].forEach(function (p) { var v = get(old, p); if (v != null) set(entry, p, v); });
+      ["fees", "mgmt", "outlook"].forEach(function (g) { if (old[g]) { entry[g] = JSON.parse(JSON.stringify(old[g])); } });
+      if (entry.headcount == null && old.headcount != null) entry.headcount = old.headcount;
+      ul.appendChild(el("li", "This year is already in years.js. The statement lines come from the PDF; the fields below keep your earlier entries."));
+    }
+    if (!entry.income) { ["lines", "manual", "checks", "out"].forEach(function (i) { $(i).hidden = true; }); return; }
+    drawLines(old); drawForm(); update();
+  }
+
+  function drawLines(old) {
+    var t = $("ltab"); t.innerHTML = "";
+    var hdr = t.insertRow(); ["Line", "From PDF", old ? "In years.js" : "", old ? "Difference" : ""].forEach(function (h) { var c = el("th", h); hdr.appendChild(c); });
+    var names = { gross_profit: "Rohergebnis (gross profit)", personnel: "Personnel", depreciation: "Depreciation", other_opex: "Other operating expenses", income_securities: "Income from securities", other_interest_income: "Other interest income", interest_expense: "Interest expense", income_tax: "Income tax", other_taxes: "Other taxes", net_income: "Net income (Jahresüberschuss)",
+      intangible: "Intangible assets", tangible: "Tangible assets", financial_assets: "Financial assets", receivables: "Receivables", cash: "Cash", prepaid: "Prepaid expenses (active RAP)", deferred_tax_assets: "Deferred tax assets", total_assets: "Total assets", equity: "Equity", provisions: "Provisions", liabilities: "Liabilities", deferred_income: "Deferred income (passive RAP)", total_equity_liabilities: "Total equity and liabilities" };
+    var diffs = 0;
+    ["income", "balance"].forEach(function (g) {
+      var sh = t.insertRow(); var c = el("td", g === "income" ? "Income statement" : "Balance sheet"); c.colSpan = 4; c.style.fontWeight = 600; c.style.color = "var(--accent)"; sh.appendChild(c);
+      Object.keys(names).forEach(function (k) {
+        if (!(k in entry[g] || (g === "balance" && k in entry.balance)) ) return;
+        if (g === "income" && !(k in (entry.income || {}))) return;
+        if (g === "balance" && ["gross_profit"].indexOf(k) >= 0) return;
+        if (!(k in entry[g])) return;
+        var r = t.insertRow(), v = entry[g][k], o = old && old[g] ? old[g][k] : null;
+        r.appendChild(el("td", names[k])); r.appendChild(el("td", fmt(v)));
+        if (old) { r.appendChild(el("td", fmt(o))); var d = o == null ? null : v - o; var dc = el("td", d == null ? "" : (Math.abs(d) < 0.005 ? "0" : fmt(d)), d != null && Math.abs(d) >= 0.005 ? "bad" : "ok"); if (d != null && Math.abs(d) >= 0.005) diffs++; r.appendChild(dc); }
+        else { r.appendChild(el("td", "")); r.appendChild(el("td", "")); }
+      });
+    });
+    /* restatement: this year's own report vs the comparative column in the next report */
+    var note = old ? (diffs ? diffs + " line(s) differ from the entry in years.js." : "All lines equal the entry in years.js.") : "New year: nothing to compare with.";
+    var nx = docs[selFY + 1], own = docs[selFY];
+    if (own && own.income && nx && nx.income) {
+      var rs = X.diffEntries({ income: own.income.cur.income, balance: own.balance.cur }, { income: nx.income.prior.income, balance: nx.balance.prior }, 0.5);
+      note += rs.length ? " Restated in the FY" + (selFY + 1) + " report: " + rs.map(function (x) { return x.key + " " + fmt(x.b - x.a); }).join(", ") + " (EUR, later report minus own report)." : " The FY" + (selFY + 1) + " report restates nothing for this year.";
+    }
+    $("linesnote").textContent = note; $("lines").hidden = false;
+  }
+
+  var FIELDS = [
+    ["headcount", "Average headcount", "n"], ["flows.dividends_paid", "Dividend paid (EUR)", "n"], ["flows.loan_paid_out", "Loan paid out in the year (EUR)", "n"],
+    ["balance.loan_in_receivables", "Loan to directors inside receivables (EUR)", "n"], ["balance.loan_in_financial_assets", "Loan to directors inside financial assets (EUR)", "n"],
+    ["fees.amount", "App-store fees (EUR)", "n"], ["fees.in_gross_profit", "Fees netted inside Rohergebnis?", "b"], ["fees.estimate", "Fee amount is an estimate?", "b"], ["fees.source", "Fee source", "t"],
+    ["mgmt.bookings", "Bookings / Bruttoverkäufe (EUR)", "n"], ["mgmt.bookings_growth_printed_pct", "Bookings growth printed (%)", "n"], ["mgmt.bookings_reliable", "Bookings figure reliable?", "b"], ["mgmt.store_receivable", "App-store receivable (EUR)", "n"], ["mgmt.note", "Note on the bookings figure", "t"],
+    ["outlook.report", "Outlook: which report", "t"], ["outlook.bookings_growth_text", "Outlook: bookings growth, as worded", "t"], ["outlook.bookings_growth_low_pct", "Outlook: low end (%)", "n"], ["outlook.bookings_growth_high_pct", "Outlook: high end (%)", "n"],
+    ["outlook.bookings_growth_pct", "Outlook: single scenario (%)", "n"], ["outlook.personnel_growth_pct", "Outlook: personnel growth (%)", "n"], ["outlook.other_opex_growth_pct", "Outlook: other opex growth (%)", "n"]
+  ];
+  function drawForm() {
+    var f = $("form"); f.innerHTML = "";
+    FIELDS.forEach(function (d) {
+      var w = el("div"), lb = el("label", d[1]), inp, v = get(entry, d[0]);
+      if (d[2] === "b") { inp = el("select"); [["", "-"], ["true", "yes"], ["false", "no"]].forEach(function (o) { var op = el("option", o[1]); op.value = o[0]; inp.appendChild(op); }); inp.value = v == null ? "" : String(v); }
+      else { inp = el("input"); inp.type = d[2] === "n" ? "number" : "text"; if (d[2] === "n") inp.step = "any"; inp.value = v == null ? "" : v; }
+      inp.oninput = inp.onchange = function () {
+        var val = inp.value;
+        if (d[2] === "n") val = val === "" ? null : parseFloat(val); else if (d[2] === "b") val = val === "" ? null : val === "true";
+        set(entry, d[0], val); update();
+      };
+      w.appendChild(lb); w.appendChild(inp); f.appendChild(w);
+    });
+    $("manual").hidden = false;
+  }
+
+  /* ---- merge, check, output ---- */
+  function cleanOutlook(e) { ["fees", "mgmt", "outlook"].forEach(function (g) { if (e[g] && !Object.keys(e[g]).length) delete e[g]; }); return e; }
+  function merged() {
+    autoNote = [];
+    var data = JSON.parse(JSON.stringify(BASE)), e = cleanOutlook(JSON.parse(JSON.stringify(entry)));
+    data.years = JSON.parse(JSON.stringify(workingYears(e.fy)));
+    data.years = data.years.filter(function (y) { return y.fy !== e.fy; }); data.years.push(e); data.years.sort(function (a, b) { return a.fy - b.fy; });
+    if (data.years[0].fy === e.fy && docs[e.fy] && docs[e.fy].balance) {
+      var ob = {}, p = docs[e.fy].balance.prior; Object.keys(p).forEach(function (k) { if (k.charAt(0) !== "_") ob[k] = Math.round(p[k] * 100) / 100; });
+      ob.loan_in_receivables = 0; ob.loan_in_financial_assets = 0;
+      data.opening = { fy: e.fy - 1, balance: ob };
+    }
+    return data;
+  }
+  function update() {
+    var data = merged(), res = C.load(data).years;
+    var t = $("ctab"); t.innerHTML = "";
+    var keys = [["Net income: model vs reported", "chk_ni"], ["Total assets: model vs reported", "chk_ta"], ["Assets = equity + liabilities", "chk_bs"], ["Equity roll-forward", "chk_equity"], ["Operating cash flow: direct vs indirect", "chk_ocf"]];
+    var h = t.insertRow(); h.appendChild(el("th", "Check (difference in EUR)")); res.forEach(function (c) { h.appendChild(el("th", "FY" + c.fy)); });
+    var allok = true;
+    keys.forEach(function (k) { var r = t.insertRow(); r.appendChild(el("td", k[0])); res.forEach(function (c) { var v = c[k[1]]; var ok = Math.abs(v) < 1; if (!ok) allok = false; r.appendChild(el("td", (Math.abs(v) < 0.005 ? "0.00" : fmt(v)), ok ? "ok" : "bad")); }); });
+    var fy = res.filter(function (c) { return c.fy === selFY; })[0];
+    $("auto").textContent = autoNote.length ? "Added automatically from the loaded reports (statement lines only, other fields as read from the text): " + autoNote.map(function (y) { return "FY" + y; }).join(", ") + "." : "";
+    $("checks").hidden = false;
+    var mine = keys.every(function (k) { return fy && Math.abs(fy[k[1]]) < 1; });
+    $("msg").textContent = mine ? "FY" + selFY + " ties on all five checks." : "FY" + selFY + " does not tie: check the fields above before you use this entry.";
+    $("msg").className = mine ? "ok" : "bad";
+    $("json").value = JSON.stringify(cleanOutlook(JSON.parse(JSON.stringify(entry))), null, 1);
+    $("out").hidden = false;
+    window.__lastData = data;
+  }
+  $("cp").onclick = function () { $("json").select(); try { document.execCommand("copy"); $("msg").textContent = "Entry copied."; } catch (e) { $("msg").textContent = "Select the text and copy it."; } };
+  $("dl").onclick = function () {
+    var txt = "/* YAZIO data. Plain JSON assigned to a global so the pages also work when opened from disk. See README.md for how to add a year. */\nwindow.YAZIO_DATA = " + JSON.stringify(window.__lastData, null, 1) + ";\n";
+    var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "text/javascript" })); a.download = "years.js"; document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  /* ---- drop zone ---- */
+  var drop = $("drop"), inp = $("file");
+  drop.onclick = function () { inp.click(); };
+  inp.onchange = function () { handle(inp.files); };
+  ["dragover", "dragenter"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave", "drop"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop", function (e) { handle(e.dataTransfer.files); });
+  window.__extractReady = true;
+})();
+</script>
+</body>
+</html>

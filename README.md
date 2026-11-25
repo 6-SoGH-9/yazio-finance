@@ -1,19 +1,22 @@
 # Yazio finance workspace
 
-A static dashboard built on one data file:
+Two static pages built on one data file:
 
 | Page | What it is |
 |---|---|
-| `cockpit.html` | Dashboard for the CFO and FP&A: KPIs, trends, growth check, forecast bias (guidance vs actual), result bridge, scenario model, 50+ ratios and model checks. |
+| `cockpit.html` | Dashboard for the CFO and FP&A: KPIs, trends, growth check, forecast bias (guidance vs actual), result bridge, scenario model, 50+ ratios, model checks. |
 | `index.html` | Landing page. It also shows which years are loaded and whether the model ties. |
 
 No build step, no server, no dependencies. Open the files in a browser, or publish the folder with GitHub Pages
-(Settings > Pages > Deploy from branch > `main` / root). 
+(Settings > Pages > Deploy from branch > `main` / root). The prep page loads web fonts from Google Fonts and falls back to system fonts offline.
 
 ## How it is built
 
 ```
 data/years.js       The only place with statement numbers. One entry per year.
+js/extract-core.js  Reads statement lines out of the PDF text (used by extract.html).
+js/vendor/          pdf.js (Apache-2.0), used only by extract.html.
+extract.html        Upload page: PDF -> year entry -> checks -> years.js.
 js/calc.js          Turns the raw lines into every derived figure: comparable P&L, derived cash flow,
                     51 ratios, checks. Works for 1 to n years. Nothing typed in.
 cockpit.html        Reads data and calc, draws charts with plain SVG.
@@ -40,7 +43,26 @@ Expenses are negative, as in the HGB income statement. Amounts are in EUR.
 - **Liquidity ratios** count deferred income as a liability by default (IFRS 15 view). Set
   `settings.deferred_income_is_liability` to 0 for the HGB view.
 
-## Add a year (for example FY2025)
+## Add a year from the PDF (automatic)
+
+Open `extract.html` and drop the annual report PDF(s). In the browser (nothing is uploaded anywhere) it:
+
+1. reads the text of the balance sheet and income statement (pdf.js, vendored in `js/vendor/`),
+2. finds each line by its German label, so different layouts per year do not matter,
+3. solves the signs of interest, tax and other-tax lines against the printed "Ergebnis nach Steuern" and "Jahresueberschuss",
+4. fills what the text gives (headcount, dividend from the equity roll-forward, fees and bookings where the management report states them),
+5. compares with `data/years.js` (differences, and restatements in the next year's comparative column),
+6. runs the five model checks with the new year added,
+7. offers a ready `years.js` to download. Replace the file in the repo and all pages follow.
+
+What a PDF cannot give and you type in the form: loan paid out, store receivable, outlook wording, and any figure the management report does not state.
+A report without an income statement (FY2020) is completed from the next year's comparative column: load both PDFs.
+`node tests/extract-test.js <folder>` re-runs the parser on text exports of the PDFs (`pdftotext -layout`) and compares with `years.js`.
+The extractor is tested on the five Yazio reports; a different layout can need a label added in `js/extract-core.js`. The page says so when a check does not tie.
+
+## Add a year by hand
+
+
 
 1. Open `data/years.js`. Copy the last entry in `years` and change `fy` to the new year.
 2. Type the new statement lines into `income` and `balance` (the filed balance sheet and income statement).
@@ -58,10 +80,12 @@ Starting with FY2020 to FY2023 and adding FY2024 later is exactly this procedure
 
 ## What is static (and how the pages tell you)
 
-Numbers, charts, tables and ratios follow the data. The risk ratings come from the FY2024 management report and are typed text; when data for a year after FY2024 is loaded they show a dashed "FY2024 report" badge. Update them by hand.
+Numbers, charts, tables, ratios and the growth/cash/ROE sentences follow the data. Analyst commentary that cites specific years
+(the "What happened" paragraph, the question list, the risk ratings from the FY2024 report) is typed text. When data for a year
+after FY2024 is loaded, those blocks show a dashed "Written for FY2024 data" badge so stale text is visible. Update them by hand.
 
 ## Checks that were run
 
 - The calculation engine reproduces the Excel check workbook: 160 statement lines and 224 ratio cells, no difference.
 - All model checks tie to the cent in all five years (net income, total assets, balance, equity roll-forward, cash flow).
-- The dashboard was opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.
+- Both pages were opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.
