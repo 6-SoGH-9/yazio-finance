@@ -14,6 +14,7 @@ No build step, no server, no dependencies. Open the files in a browser, or publi
 
 ```
 data/years.js       The only place with statement numbers. One entry per year.
+js/store.js         Keeps dropped reports in the browser, builds the data, draws the "Your statements" box.
 js/extract-core.js  Reads statement lines out of the PDF text (used by extract.html).
 js/vendor/          pdf.js (Apache-2.0), used only by extract.html.
 extract.html        Upload page: PDF -> year entry -> checks -> years.js.
@@ -43,7 +44,15 @@ Expenses are negative, as in the HGB income statement. Amounts are in EUR.
 - **Liquidity ratios** count deferred income as a liability by default (IFRS 15 view). Set
   `settings.deferred_income_is_liability` to 0 for the HGB view.
 
-## Add a year from the PDF (automatic)
+## For end users: just open the cockpit
+
+Open `cockpit.html`, drop one or several annual report PDFs into the "Your statements" box, and the dashboard builds itself.
+The statements are kept in the browser of that computer (localStorage), so they do not have to be dropped again. Each year has a x to remove it; drop another PDF to add a year or replace one.
+"Export my data" saves a small file; "Import saved data" restores it on another computer or browser. Nothing is uploaded anywhere.
+When nothing has been added, the cockpit shows `data/years.js` if it has years in it, otherwise it asks for PDFs.
+Fields that no PDF prints (loan paid out, store receivable, outlook wording) are not asked for here; use `extract.html` below if you need to set them.
+
+## Add a year from the PDF (for the maintainer, writes data/years.js)
 
 Open `extract.html` and drop the annual report PDF(s). In the browser (nothing is uploaded anywhere) it:
 
@@ -75,19 +84,4 @@ The extractor is tested on the five Yazio reports; a different layout can need a
 5. Run `node tests/verify.js`. All five checks must say OK. A difference points at a typo in that year.
 6. Reload the pages. Charts, tables, ratios and year selectors follow. No code change is needed.
 
-To test with fewer years, add `?to=2023` (or `?from=2022`) to a page address.
-Starting with FY2020 to FY2023 and adding FY2024 later is exactly this procedure.
-
-## What is static (and how the pages tell you)
-
-Numbers, charts, tables, ratios and the growth/cash/ROE sentences follow the data. Analyst commentary that cites specific years
-(the "What happened" paragraph, the question list, the risk ratings from the FY2024 report) is typed text. When data for a year
-after FY2024 is loaded, those blocks show a dashed "Written for FY2024 data" badge so stale text is visible. Update them by hand.
-
-## Checks that were run
-
-- The calculation engine reproduces the Excel check workbook: 160 statement lines and 224 ratio cells, no difference.
-- All model checks tie to the cent in all five years (net income, total assets, balance, equity roll-forward, cash flow).
-- Both pages were opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.
-
-- 
+To test with fewer years, add `?to=2023` (or `?from=2022`) to a pag
