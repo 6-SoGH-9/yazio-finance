@@ -19,17 +19,19 @@
   }
 
   /* docs {fy: parsed report} -> data in the shape of data/years.js, plus notes per year */
-  function buildData(docs, meta) {
+  function buildData(docs, meta, seed) {
     var fys = Object.keys(docs).map(Number).sort(function (a, b) { return a - b; });
-    var data = { company: (meta && meta.company) || "Company", currency: "EUR", standard: "HGB", settings: { deferred_income_is_liability: 1 }, years: [] }, notes = {}, prev = null;
+    var data = { company: (meta && meta.company) || "Company", currency: "EUR", standard: "HGB", settings: { deferred_income_is_liability: 1 }, years: [] }, notes = {}, byFy = {};
+    (seed || []).forEach(function (y) { byFy[y.fy] = y; });
     fys.forEach(function (fy) {
+      var prev = byFy[fy - 1] || null;
       var r = X.buildEntry(fy, docs[fy], docs[fy + 1], prev);
       if (r.error || !r.entry || !r.entry.income) { notes[fy] = [r.error || "No income statement for this year. Add the next year's report, its prior-year column holds it."]; return; }
       var e = r.entry;
       if (e.fees && e.fees.amount == null) { e.fees.amount = 0; r.warnings.push("Store fees not found in the report text: shown as 0."); }
       if (e.headcount == null) e.headcount = 0;
-      data.years.push(e); notes[fy] = r.warnings.filter(function (w) { return !/Loan to the managing|Dividend EUR/.test(w); }); prev = e;
-      if (fys.indexOf(fy - 1) < 0 && data.years.length > 1) notes[fy].push("FY" + (fy - 1) + " is missing: checks that compare with the previous year will not tie.");
+      data.years.push(e); byFy[fy] = e; notes[fy] = r.warnings.filter(function (w) { return !/Loan to the managing|Dividend EUR/.test(w); });
+      if (!byFy[fy - 1] && data.years.length > 1) notes[fy].push("FY" + (fy - 1) + " is missing: checks that compare with the previous year will not tie.");
     });
     if (data.years.length && docs[data.years[0].fy]) {
       var p = docs[data.years[0].fy].balance.prior, ob = {};
@@ -41,11 +43,24 @@
   }
 
   function init(builtin) {
-    var o = loadDocs(), has = Object.keys(o.docs).length > 0;
-    var built = has ? buildData(o.docs, o.meta) : null;
-    var useStored = has && built.data.years.length > 0;
+    var o = loadDocs(), docs = o.docs || {}, hidden = o.hidden || [];
     var bi = builtin && builtin.years && builtin.years.length ? builtin : null;
-    return { source: useStored ? "stored" : (bi ? "builtin" : "none"), data: useStored ? built.data : bi, notes: built ? built.notes : {}, docs: o.docs, meta: o.meta || {}, builtin: bi };
+    var built = Object.keys(docs).length ? buildData(docs, o.meta, bi ? bi.years : []) : { data: { years: [] }, notes: {} };
+    var have = {}; built.data.years.forEach(function (y) { have[y.fy] = 1; });
+    var years = [], src = {};
+    if (bi) bi.years.forEach(function (y) { if (!have[y.fy] && hidden.indexOf(y.fy) < 0) { years.push(y); src[y.fy] = "example"; } });
+    built.data.years.forEach(function (y) { years.push(y); src[y.fy] = "yours"; });
+    years.sort(function (a, b) { return a.fy - b.fy; });
+    var data = null;
+    if (years.length) {
+      data = JSON.parse(JSON.stringify(bi || built.data)); data.years = years;
+      var f0 = years[0].fy, op = null, all = (bi ? bi.years : []);
+      if (bi && bi.opening && bi.opening.fy === f0 - 1) op = bi.opening;
+      if (!op) { var pe = all.filter(function (y) { return y.fy === f0 - 1; })[0]; if (pe) op = { fy: pe.fy, balance: pe.balance }; }
+      if (!op && built.data.opening && built.data.opening.fy === f0 - 1) op = built.data.opening;
+      if (op) data.opening = op; else if (!data.opening) delete data.opening;
+    }
+    return { source: Object.keys(docs).length && data ? "stored" : (data ? "builtin" : "none"), data: data, notes: built.notes, docs: docs, meta: o.meta || {}, hidden: hidden, builtin: bi, years: years.map(function (y) { return { fy: y.fy, src: src[y.fy] }; }) };
   }
 
   /* ---- PDF -> parsed report ---- */
@@ -92,8 +107,8 @@
     function redraw() {
       box.innerHTML = ""; var wrap = el("div", null, "ys"); box.appendChild(wrap);
       wrap.appendChild(el("h2", "Your statements"));
-      var src = state.source === "stored" ? "Showing the statements you added. They are stored in this browser only and never leave your computer."
-        : state.source === "builtin" ? "Showing the built-in example data. Drop your own annual report PDFs below to replace it."
+      var src = state.source === "stored" ? "Showing the example years together with the statements you added. What you add is stored in this browser only and never leaves your computer. A year you drop replaces the same year."
+        : state.source === "builtin" ? "Showing the example years. Drop annual report PDFs below to add years or replace them."
         : "No data yet. Drop the annual report PDFs (HGB) below. One or several years; the cockpit builds from them.";
       wrap.appendChild(el("p", src));
       var dz = el("div", "Drop PDF files here or click to choose them", "dz"), inp = el("input"); inp.type = "file"; inp.accept = "application/pdf"; inp.multiple = true; inp.hidden = true;
@@ -102,25 +117,29 @@
       ["dragleave", "drop"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove("over"); }); });
       dz.addEventListener("drop", function (e) { add(e.dataTransfer.files); });
       wrap.appendChild(dz); wrap.appendChild(inp); wrap.appendChild(busy);
-      var fys = Object.keys(state.docs).map(Number).sort(function (a, b) { return a - b; });
-      if (fys.length) {
+      var list = state.years.slice(), seen = {}; list.forEach(function (y) { seen[y.fy] = 1; });
+      Object.keys(state.docs).forEach(function (k) { if (!seen[k]) list.push({ fy: +k, src: "yours", skipped: true }); });
+      list.sort(function (a, b) { return a.fy - b.fy; });
+      var fys = Object.keys(state.docs).map(Number);
+      if (list.length) {
         var chips = el("div", null, "chips"); wrap.appendChild(chips);
-        fys.forEach(function (fy) {
-          var d = state.docs[fy], ties = d.ties !== false;
-          var c = el("span", null, "chip2"); c.appendChild(el("b", "FY" + fy)); c.appendChild(el("span", ties ? "ties" : "check", ties ? "ok" : "bad"));
-          var x = el("button", "×"); x.title = "Remove FY" + fy; x.setAttribute("aria-label", "Remove FY" + fy); x.onclick = function () { remove(fy); };
+        list.forEach(function (y) {
+          var d = state.docs[y.fy], c = el("span", null, "chip2"); c.appendChild(el("b", "FY" + y.fy));
+          if (y.src === "yours" && d) c.appendChild(el("span", d.ties !== false ? "ties" : "check", d.ties !== false && !y.skipped ? "ok" : "bad"));
+          else c.appendChild(el("span", "example", "wn"));
+          var x = el("button", "×"); x.title = "Remove FY" + y.fy; x.setAttribute("aria-label", "Remove FY" + y.fy); x.onclick = function () { remove(y.fy, y.src); };
           c.appendChild(x); chips.appendChild(c);
         });
-        var all = []; fys.forEach(function (fy) { (state.notes[fy] || []).forEach(function (n) { all.push("FY" + fy + ": " + n); }); });
+        var all = []; list.forEach(function (y) { (state.notes[y.fy] || []).forEach(function (n) { all.push("FY" + y.fy + ": " + n); }); });
         if (all.length) { var det = document.createElement("details"); var sm = el("summary", all.length + " note" + (all.length > 1 ? "s" : "") + " on the extracted data"); det.appendChild(sm); var ul = el("ul"); all.forEach(function (n) { ul.appendChild(el("li", n)); }); det.appendChild(ul); wrap.appendChild(det); }
       }
       var row = el("div", null, "row"); wrap.appendChild(row);
-      if (fys.length) { var ex = el("button", "Export my data", "b"); ex.onclick = function () { download("yazio-statements.json", JSON.stringify({ docs: state.docs, meta: state.meta }), "application/json"); }; row.appendChild(ex); }
+      if (fys.length) { var ex = el("button", "Export my data", "b"); ex.onclick = function () { download("yazio-statements.json", JSON.stringify({ docs: state.docs, meta: state.meta, hidden: state.hidden }), "application/json"); }; row.appendChild(ex); }
       var im = el("button", "Import saved data", "b"), imf = el("input"); imf.type = "file"; imf.accept = ".json,application/json"; imf.hidden = true;
       im.onclick = function () { imf.click(); };
-      imf.onchange = function () { var f = imf.files[0]; if (!f) return; f.text().then(function (t) { try { var o = JSON.parse(t); if (!o.docs) throw 0; saveDocs({ docs: o.docs, meta: o.meta || {} }); location.reload(); } catch (e) { busy.textContent = "That file is not an export from this page."; busy.className = "bad"; } }); };
+      imf.onchange = function () { var f = imf.files[0]; if (!f) return; f.text().then(function (t) { try { var o = JSON.parse(t); if (!o.docs) throw 0; saveDocs({ docs: o.docs, meta: o.meta || {}, hidden: o.hidden || [] }); location.reload(); } catch (e) { busy.textContent = "That file is not an export from this page."; busy.className = "bad"; } }); };
       row.appendChild(im); row.appendChild(imf);
-      if (fys.length) { var rs = el("button", state.builtin ? "Remove all and show the example data" : "Remove all", "b"); rs.onclick = function () { if (confirm("Remove all stored statements from this browser?")) { lsClear(); root.__yazioMem = null; location.reload(); } }; row.appendChild(rs); }
+      if (fys.length || state.hidden.length) { var rs = el("button", state.builtin ? "Reset to the example years" : "Remove all", "b"); rs.onclick = function () { if (confirm("Remove everything you added in this browser?")) { lsClear(); root.__yazioMem = null; location.reload(); } }; row.appendChild(rs); }
     }
     async function add(files) {
       var o = loadDocs(); o.meta = o.meta || {};
@@ -135,7 +154,12 @@
       }
       saveDocs(o); location.reload();
     }
-    function remove(fy) { var o = loadDocs(); delete o.docs[fy]; if (Object.keys(o.docs).length) saveDocs(o); else { lsClear(); root.__yazioMem = null; } location.reload(); }
+    function remove(fy, src) {
+      var o = loadDocs(); o.docs = o.docs || {}; o.hidden = o.hidden || [];
+      if (src === "example") { if (o.hidden.indexOf(fy) < 0) o.hidden.push(fy); } else delete o.docs[fy];
+      if (Object.keys(o.docs).length || o.hidden.length) saveDocs(o); else { lsClear(); root.__yazioMem = null; }
+      location.reload();
+    }
     redraw();
   }
 
