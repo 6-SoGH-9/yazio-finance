@@ -92,7 +92,16 @@ small{color:var(--muted)}
 <script>
 (function () {
   "use strict";
-  var X = window.YAZIO_EXTRACT, C = window.YAZIO_CALC, BASE = window.YAZIO_DATA;
+  var X = window.YAZIO_EXTRACT, C = window.YAZIO_CALC;
+  /* years.js may be empty or missing: start from a blank skeleton */
+  var BASE = window.YAZIO_DATA && typeof window.YAZIO_DATA === "object" ? window.YAZIO_DATA : {};
+  if (!BASE.years) BASE.years = [];
+  if (!BASE.company) BASE.company = "YAZIO GmbH";
+  if (!BASE.currency) BASE.currency = "EUR";
+  if (!BASE.standard) BASE.standard = "HGB, Gesamtkostenverfahren";
+  if (!BASE.settings) BASE.settings = { deferred_income_is_liability: 1 };
+  if (!BASE._readme) BASE._readme = "One entry per financial year. To add a year, copy the last entry in 'years', change fy and the numbers. Expenses are negative, as in the HGB income statement. Amounts in EUR. Nothing else in the pages needs to change.";
+  window.YAZIO_DATA = BASE;
   var $ = function (id) { return document.getElementById(id); };
   var docs = {};        // fy -> parsed document
   var entry = null, built = null, selFY = null;
@@ -164,7 +173,7 @@ small{color:var(--muted)}
     var ys = BASE.years.slice(), have = {}; ys.forEach(function (e) { have[e.fy] = 1; });
     var cand = {}; Object.keys(docs).forEach(function (k) { cand[k] = 1; cand[k - 1] = 1; });
     Object.keys(cand).map(Number).sort(function (a, b) { return a - b; }).forEach(function (fy) {
-      if (have[fy] || fy >= below) return;
+      if (have[fy] || fy >= below || !docs[fy]) return;
       var b = X.buildEntry(fy, docs[fy], docs[fy + 1], ys.filter(function (e) { return e.fy === fy - 1; })[0]);
       if (b.entry && b.entry.income) { ys.push(b.entry); have[fy] = 1; autoNote.push(fy); }
     });
@@ -255,10 +264,11 @@ small{color:var(--muted)}
     var data = JSON.parse(JSON.stringify(BASE)), e = cleanOutlook(JSON.parse(JSON.stringify(entry)));
     data.years = JSON.parse(JSON.stringify(workingYears(e.fy)));
     data.years = data.years.filter(function (y) { return y.fy !== e.fy; }); data.years.push(e); data.years.sort(function (a, b) { return a.fy - b.fy; });
-    if (data.years[0].fy === e.fy && docs[e.fy] && docs[e.fy].balance) {
-      var ob = {}, p = docs[e.fy].balance.prior; Object.keys(p).forEach(function (k) { if (k.charAt(0) !== "_") ob[k] = Math.round(p[k] * 100) / 100; });
+    var f0 = data.years[0].fy, inBase = BASE.years.some(function (y) { return y.fy === f0; });
+    if ((!inBase || !data.opening) && docs[f0] && docs[f0].balance) {
+      var ob = {}, p = docs[f0].balance.prior; Object.keys(p).forEach(function (k) { if (k.charAt(0) !== "_") ob[k] = Math.round(p[k] * 100) / 100; });
       ob.loan_in_receivables = 0; ob.loan_in_financial_assets = 0;
-      data.opening = { fy: e.fy - 1, balance: ob };
+      data.opening = { fy: f0 - 1, balance: ob };
     }
     return data;
   }

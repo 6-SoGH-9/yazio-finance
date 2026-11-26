@@ -30,7 +30,7 @@ small{color:var(--muted)}
 <script src="data/years.js"></script>
 <script src="js/calc.js"></script>
 <script>
-try{var y=YAZIO_CALC.load(window.YAZIO_DATA).years;document.getElementById('status').textContent='Annual statements loaded: '+y.map(function(c){return 'FY'+c.fy}).join(', ')+'. All model checks tie: '+(y.every(function(c){return Math.abs(c.chk_ni)<1&&Math.abs(c.chk_bs)<1&&Math.abs(c.chk_ocf)<1&&Math.abs(c.chk_equity)<1})?'yes.':'NO, see the cockpit.');}catch(e){document.getElementById('status').textContent='Could not read data/years.js.'}
+try{if(!window.YAZIO_DATA||!(window.YAZIO_DATA.years||[]).length){document.getElementById('status').textContent='No data loaded yet. Open "Add a year from the PDF" and drop in the annual reports.';throw 0}var y=YAZIO_CALC.load(window.YAZIO_DATA).years;document.getElementById('status').textContent='Annual statements loaded: '+y.map(function(c){return 'FY'+c.fy}).join(', ')+'. All model checks tie: '+(y.every(function(c){return Math.abs(c.chk_ni)<1&&Math.abs(c.chk_bs)<1&&Math.abs(c.chk_ocf)<1&&Math.abs(c.chk_equity)<1})?'yes.':'NO, see the cockpit.');}catch(e){if(e!==0)document.getElementById('status').textContent='Could not read data/years.js.'}
 </script>
 </body>
 </html>
