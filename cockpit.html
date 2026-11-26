@@ -252,15 +252,15 @@ function viewCFO(){
 }
 function growthCheck(){
   var wrap=h("div",{});
-  var ys=Y.filter(function(c,i){return i>0&&c.bookings_printed_growth!=null&&Y[i-1].bookings_any!=null}).map(function(c){return c.fy});
-  if(!ys.length){wrap.append(h("div",{class:"card"},h("p",{class:"small"},"Needs two consecutive years with a bookings figure in the management report.")));return wrap;}
+  var ys=Y.filter(function(c,i){return i>0}).map(function(c){return c.fy});
+  if(!ys.length){wrap.append(h("div",{class:"card"},h("p",{class:"small"},"Needs at least two years.")));return wrap;}
   if(ys.indexOf(st.gy)<0)st.gy=ys[ys.length-1];
   var draw=function(){
     var i=FY.indexOf(st.gy),c=Y[i],p=Y[i-1];
     var sel=h("select",{"aria-label":"Growth year"},...ys.map(function(v){return h("option",{value:v},"FY"+v+" vs FY"+(v-1))}));sel.value=st.gy;sel.onchange=function(){st.gy=+sel.value;draw();};
-    var recomputed=c.bookings_any/p.bookings_any-1,printed=c.bookings_printed_growth,ties=Math.abs(recomputed-printed)<0.015;
+    var recomputed=p.bookings_any!=null?c.bookings_any/p.bookings_any-1:null,printed=(c.raw.mgmt&&c.raw.mgmt.bookings_reliable===false)?null:c.bookings_printed_growth,ties=recomputed!=null&&printed!=null&&Math.abs(recomputed-printed)<0.015;
     var netGp=function(x){return x.gp-x.fees},rows=[
-      {n:"Printed in the management report (about "+pl(printed,0)+"), gross subscription sales",v:printed,note:"FY"+c.fy+" report: €"+(c.bookings_any/1e6).toFixed(1)+"m. A management KPI in the narrative, not a line in the income statement.",c:"var(--s1)"},
+      {n:"Printed in the management report (about "+(printed!=null?pl(printed,0):"")+"), gross subscription sales",v:printed,note:"FY"+c.fy+" report: €"+(c.bookings_any/1e6).toFixed(1)+"m. A management KPI in the narrative, not a line in the income statement.",c:"var(--s1)"},
       {n:"Recomputed from the printed figures of the two reports",v:recomputed,note:ties?"Ties to the printed figure.":"Does not tie to the printed figure"+(p.raw.mgmt&&p.raw.mgmt.bookings_reliable===false?": the prior-year figure looks like recognised revenue, not billings.":"."),c:ties?"var(--s1)":"var(--serious)"},
       {n:"Gross profit ("+(st.basis==="comparable"?"fees in other opex":"as filed")+")",v:gpB(c)/gpB(p)-1,note:"Revenue recognised over subscription terms, less material cost.",c:"var(--s2)"},
       {n:"Implied billings = gross profit + change in deferred income (inference)",v:c.g.billings_implied,note:"Rebuilt from audited lines, independent of the narrative KPI.",c:"var(--s3)"},
@@ -270,9 +270,9 @@ function growthCheck(){
     var resid=c.bookings_any-c.billings_implied;
     wrap.replaceChildren(h("div",{class:"card"},h("div",{class:"filters",style:"padding:0 0 8px"},h("label",{},"Compare",sel),h("span",{class:"small"},"Growth rate depends on which measure is named.")),
       hbars(rows,Math.max.apply(null,rows.map(function(r){return r.v}))*1.05),
-      h("div",{class:"note"+(ties?"":" warn")},ties?[h("b",{},"What the evidence supports. "),"The printed growth ties to the figures in the two reports. It is a billings-type KPI, not revenue. Audited gross profit grew "+pc(gpB(c)/gpB(p)-1,1)+", and billings rebuilt from audited lines grew about "+pc(c.g.billings_implied,1)+"."]
+      h("div",{class:"note"+(ties||recomputed==null?"":" warn")},recomputed==null?[h("b",{},"What the evidence supports. "),(printed==null?"The management report does not give a usable bookings growth for this pair.":"The prior-year bookings figure is not available as a usable number, so the printed growth cannot be recomputed.")+" Audited gross profit grew "+pc(gpB(c)/gpB(p)-1,1)+" and billings rebuilt from audited lines grew about "+pc(c.g.billings_implied,1)+"."]:ties?[h("b",{},"What the evidence supports. "),"The printed growth ties to the figures in the two reports. It is a billings-type KPI, not revenue. Audited gross profit grew "+pc(gpB(c)/gpB(p)-1,1)+", and billings rebuilt from audited lines grew about "+pc(c.g.billings_implied,1)+"."]
         :[h("b",{},"Definition drift. "),"Quoting growth across a change in what the term measures gives a different rate ("+pc(recomputed,0)+" recomputed against "+pc(printed,0)+" printed)."]),
-      h("p",{class:"small"},"Bridge, FY"+c.fy+": gross profit "+em(c.gp)+" + change in deferred income "+em(c.di-p.di)+" = "+em(c.billings_implied)+" implied billings vs "+em(c.bookings_any)+" printed; unexplained residual "+em(resid)+" ("+pl(resid/c.bookings_any)+"), possibly refunds, VAT or other income (inference).")));
+      c.bookings_any==null?h("p",{class:"small"},"Bridge, FY"+c.fy+": gross profit "+em(c.gp)+" + change in deferred income "+em(c.di-p.di)+" = "+em(c.billings_implied)+" implied billings. No bookings figure in the report to compare with."):h("p",{class:"small"},"Bridge, FY"+c.fy+": gross profit "+em(c.gp)+" + change in deferred income "+em(c.di-p.di)+" = "+em(c.billings_implied)+" implied billings vs "+em(c.bookings_any)+" printed; unexplained residual "+em(resid)+" ("+pl(resid/c.bookings_any)+"), possibly refunds, VAT or other income (inference).")));
   };draw();return wrap;
 }
 
