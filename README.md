@@ -84,4 +84,17 @@ The extractor is tested on the five Yazio reports; a different layout can need a
 5. Run `node tests/verify.js`. All five checks must say OK. A difference points at a typo in that year.
 6. Reload the pages. Charts, tables, ratios and year selectors follow. No code change is needed.
 
-To test with fewer years, add `?to=2023` (or `?from=2022`) to a pag
+To test with fewer years, add `?to=2023` (or `?from=2022`) to a page address.
+Starting with FY2020 to FY2023 and adding FY2024 later is exactly this procedure.
+
+## What is static (and how the pages tell you)
+
+Numbers, charts, tables, ratios and the growth/cash/ROE sentences follow the data. Analyst commentary that cites specific years
+(the "What happened" paragraph, the question list, the risk ratings from the FY2024 report) is typed text. When data for a year
+after FY2024 is loaded, those blocks show a dashed "Written for FY2024 data" badge so stale text is visible. Update them by hand.
+
+## Checks that were run
+
+- The calculation engine reproduces the Excel check workbook: 160 statement lines and 224 ratio cells, no difference.
+- All model checks tie to the cent in all five years (net income, total assets, balance, equity roll-forward, cash flow).
+- Both pages were opened with 1, 2, 3, 4 and 5 years and with a later start year: no script errors.

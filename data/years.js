@@ -1,6 +1,79 @@
 /* YAZIO data. Plain JSON assigned to a global so the pages also work when opened from disk. See README.md for how to add a year. */
 window.YAZIO_DATA = {
+ "_readme": "One entry per financial year. To add a year, copy the last entry in 'years', change fy and the numbers. Expenses are negative, as in the HGB income statement. Amounts in EUR. Nothing else in the pages needs to change.",
+ "company": "YAZIO GmbH",
+ "currency": "EUR",
+ "standard": "HGB, Gesamtkostenverfahren",
+ "settings": {
+  "deferred_income_is_liability": 1
+ },
+ "opening": {
+  "fy": 2019,
+  "balance": {
+   "intangible": 0,
+   "tangible": 70486,
+   "financial_assets": 0,
+   "loan_in_financial_assets": 0,
+   "receivables": 1262782.39,
+   "loan_in_receivables": 0,
+   "cash": 2499867.37,
+   "prepaid": 1491709.65,
+   "deferred_tax_assets": 205860,
+   "total_assets": 5807883.96,
+   "equity": -277178.55,
+   "provisions": 64345.09,
+   "liabilities": 239599.6,
+   "deferred_income": 5503939.27,
+   "total_equity_liabilities": 5807883.96
+  }
+ },
  "years": [
+  {
+   "fy": 2020,
+   "income": {
+    "gross_profit": 13580299.34,
+    "personnel": -1608847.99,
+    "depreciation": -28974.2,
+    "other_opex": -9092942.9,
+    "income_securities": 1.96,
+    "other_interest_income": 0.01,
+    "interest_expense": 600,
+    "income_tax": -1005252.54,
+    "other_taxes": 0,
+    "net_income": 1844883.68
+   },
+   "balance": {
+    "intangible": 5411,
+    "tangible": 69807,
+    "financial_assets": 503563.97,
+    "loan_in_financial_assets": 0,
+    "receivables": 1740819.31,
+    "loan_in_receivables": 300000,
+    "cash": 6444617.73,
+    "prepaid": 2337192.87,
+    "deferred_tax_assets": 0,
+    "total_assets": 11101411.88,
+    "equity": 1567705.13,
+    "provisions": 756185.2,
+    "liabilities": 288184.03,
+    "deferred_income": 8489337.52,
+    "total_equity_liabilities": 11101411.88
+   },
+   "headcount": 28,
+   "flows": {
+    "dividends_paid": 0,
+    "loan_paid_out": 300000
+   },
+   "fees": {
+    "amount": 4800000,
+    "in_gross_profit": true,
+    "estimate": true,
+    "source": "Own estimate: fees sat inside purchased services until FY2021"
+   },
+   "mgmt": {
+    "revenue_printed": 18.6
+   }
+  },
   {
    "fy": 2021,
    "income": {
@@ -21,7 +94,7 @@ window.YAZIO_DATA = {
     "financial_assets": 2789310.82,
     "loan_in_financial_assets": 0,
     "receivables": 2480176.2,
-    "loan_in_receivables": 0,
+    "loan_in_receivables": 300000,
     "cash": 7890388.91,
     "prepaid": 1893666.74,
     "deferred_tax_assets": 0,
@@ -43,9 +116,14 @@ window.YAZIO_DATA = {
     "estimate": false,
     "source": "FY2022 management report (rounded)"
    },
-   "mgmt": {},
+   "mgmt": {
+    "store_receivable": 1606933.74,
+    "revenue_printed": 21.8
+   },
    "outlook": {
-    "report": "FY2021 report"
+    "report": "FY2021 report",
+    "personnel_growth_pct": 94,
+    "other_opex_growth_pct": 49
    }
   },
   {
@@ -68,7 +146,7 @@ window.YAZIO_DATA = {
     "financial_assets": 3808845.81,
     "loan_in_financial_assets": 0,
     "receivables": 4488142,
-    "loan_in_receivables": 0,
+    "loan_in_receivables": 300000,
     "cash": 7457945.49,
     "prepaid": 174694.69,
     "deferred_tax_assets": 0,
@@ -90,9 +168,18 @@ window.YAZIO_DATA = {
     "estimate": false,
     "source": "FY2023 management report (rounded)"
    },
-   "mgmt": {},
+   "mgmt": {
+    "bookings": 22300000,
+    "bookings_reliable": false,
+    "bookings_growth_printed_pct": 2,
+    "store_receivable": 1010375.97,
+    "revenue_printed": 22.5,
+    "note": "FY2022 report calls EUR 22.3m 'Bruttoverkaeufe' but it looks like recognised revenue, so it is not used as bookings"
+   },
    "outlook": {
-    "report": "FY2022 report"
+    "report": "FY2022 report",
+    "personnel_growth_pct": 36,
+    "other_opex_growth_pct": 7
    }
   },
   {
@@ -113,7 +200,7 @@ window.YAZIO_DATA = {
     "intangible": 14353.55,
     "tangible": 175146,
     "financial_assets": 4102376.25,
-    "loan_in_financial_assets": 0,
+    "loan_in_financial_assets": 300000,
     "receivables": 5423069.18,
     "loan_in_receivables": 0,
     "cash": 8827089.48,
@@ -140,38 +227,70 @@ window.YAZIO_DATA = {
    "mgmt": {
     "bookings": 32200000,
     "bookings_reliable": true,
-    "bookings_growth_printed_pct": 50
+    "bookings_growth_printed_pct": 50,
+    "store_receivable": 2700000
    },
    "outlook": {
-    "report": "FY2023 report"
+    "report": "FY2023 report, conservative scenario",
+    "personnel_growth_pct": 48,
+    "other_opex_growth_pct": 51,
+    "bookings_growth_pct": 40
+   }
+  },
+  {
+   "fy": 2024,
+   "income": {
+    "gross_profit": 47997327.51,
+    "personnel": -7001991.69,
+    "depreciation": -121550.63,
+    "other_opex": -37320225.6,
+    "income_securities": 10.18,
+    "other_interest_income": 178175.86,
+    "interest_expense": -592,
+    "income_tax": -1442362.77,
+    "other_taxes": -12513.72,
+    "net_income": 2276277.14
+   },
+   "balance": {
+    "intangible": 13524.55,
+    "tangible": 251552,
+    "financial_assets": 17183177.39,
+    "loan_in_financial_assets": 300000,
+    "receivables": 6403722.84,
+    "loan_in_receivables": 0,
+    "cash": 7977610.46,
+    "prepaid": 358748.36,
+    "deferred_tax_assets": 0,
+    "total_assets": 32188335.6,
+    "equity": 4811372.26,
+    "provisions": 1350097.84,
+    "liabilities": 2449534.53,
+    "deferred_income": 23577330.97,
+    "total_equity_liabilities": 32188335.6
+   },
+   "headcount": 83,
+   "flows": {
+    "dividends_paid": 1000000,
+    "loan_paid_out": 0
+   },
+   "fees": {
+    "amount": 13200000,
+    "in_gross_profit": false,
+    "estimate": false,
+    "source": "FY2024 management report (rounded)"
+   },
+   "mgmt": {
+    "bookings": 59800000,
+    "bookings_reliable": true,
+    "bookings_growth_printed_pct": 86,
+    "store_receivable": 4600000
+   },
+   "outlook": {
+    "report": "FY2024 report, conservative scenario",
+    "bookings_growth_text": "mid double-digit (reading: 40-60%)",
+    "bookings_growth_low_pct": 40,
+    "bookings_growth_high_pct": 60
    }
   }
- ],
- "company": "YAZIO GmbH",
- "currency": "EUR",
- "standard": "HGB, Gesamtkostenverfahren",
- "settings": {
-  "deferred_income_is_liability": 1
- },
- "_readme": "One entry per financial year. To add a year, copy the last entry in 'years', change fy and the numbers. Expenses are negative, as in the HGB income statement. Amounts in EUR. Nothing else in the pages needs to change.",
- "opening": {
-  "fy": 2020,
-  "balance": {
-   "intangible": 5411,
-   "tangible": 69807,
-   "financial_assets": 503563.97,
-   "loan_in_financial_assets": 0,
-   "receivables": 1740819.31,
-   "loan_in_receivables": 0,
-   "cash": 6444617.73,
-   "prepaid": 2337192.87,
-   "deferred_tax_assets": 0,
-   "total_assets": 11101411.88,
-   "equity": 1567705.13,
-   "provisions": 756185.2,
-   "liabilities": 288184.03,
-   "deferred_income": 8489337.52,
-   "total_equity_liabilities": 11101411.88
-  }
- }
+ ]
 };

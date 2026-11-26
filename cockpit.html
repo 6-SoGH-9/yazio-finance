@@ -95,23 +95,30 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
   <div class="filters" id="filters"></div>
  </div>
 </header>
+<section class="wrap" id="datapanel"></section>
 <main class="wrap" id="main"></main>
 <footer class="wrap">
  Sources: YAZIO GmbH annual financial statements (HGB, Unternehmensregister extracts).
- All statement figures come from data/years.js; add a year there and everything on this page updates.
+ All statement figures come from the statements you add above (kept in this browser), or from data/years.js when none are added.
 </footer>
 <div id="tip"></div>
 
+<script src="js/vendor/pdf.min.js"></script>
 <script src="data/years.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/extract-core.js"></script>
+<script src="js/store.js"></script>
 <script>
 "use strict";
 var CALC=window.YAZIO_CALC,fm=CALC.fmt;
 var qs=new URLSearchParams(location.search);
-var LD=CALC.load(window.YAZIO_DATA,{from:+qs.get("from")||0,to:+qs.get("to")||0});
+var DS=window.YAZIO_STORE.init(window.YAZIO_DATA);
+window.YAZIO_STORE.mount(document.getElementById("datapanel"),DS);
+if(!DS.data){document.getElementById("asof").textContent="";throw new Error("no data yet");}
+var LD=CALC.load(DS.data,{from:+qs.get("from")||0,to:+qs.get("to")||0});
 var Y=LD.years,N=Y.length;
 var $=function(s){return document.querySelector(s)};
-if(!N){document.body.insertAdjacentHTML("beforeend","<p style='padding:20px'>No data found in data/years.js.</p>");throw new Error("no data");}
+if(!N){throw new Error("no data");}
 
 /* ---------- helpers ---------- */
 var h=function(tag,props){var e=document.createElement(tag),kids=Array.prototype.slice.call(arguments,2);
