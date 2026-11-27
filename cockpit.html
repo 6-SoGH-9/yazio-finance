@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>YAZIO Finance Cockpit</title>
+<title>Yazio financials from public filings (independent, unofficial)</title>
 <style>
 :root{
   color-scheme:light;
@@ -88,7 +88,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
 <header>
  <div class="wrap">
   <div class="top">
-   <h1>YAZIO finance cockpit<small id="asof"></small></h1>
+   <h1>Yazio financials from public filings<small id="asof"></small></h1>
    <div class="tabs" role="tablist" id="tabs"></div>
    <span><a href="index.html">Home</a> <button class="btn" id="theme" aria-label="Toggle light or dark theme">Theme</button></span>
   </div>
@@ -98,7 +98,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
 <section class="wrap" id="datawrap"><button class="btn" id="datatoggle" aria-expanded="false" style="margin:10px 0 0"></button><div id="datapanel" hidden style="margin-top:10px"></div></section>
 <main class="wrap" id="main"></main>
 <footer class="wrap">
- Sources: YAZIO GmbH annual financial statements (HGB, Unternehmensregister extracts).
+ Independent analysis of public filings. Not affiliated with, or approved by, YAZIO. Sources: YAZIO GmbH annual financial statements (HGB, Unternehmensregister extracts).
  All statement figures come from the statements you add above (kept in this browser), or from data/years.js when none are added.
 </footer>
 <div id="tip"></div>
@@ -281,9 +281,9 @@ function viewAnalysis(){
       {name:"Personnel cost per head",color:"var(--s2)",values:I.map(function(j){return -Y[j].pers/Y[j].head/1000})}],fmt:function(v){return "€"+v.toFixed(0)+"k"},axis:function(v){return v.toFixed(0)},labels:true})));
   root.append(h("h3",{class:"sec"},"Growth check: which growth rate, which definition?"),growthCheck());
   root.append(h("h3",{class:"sec"},"Result bridge"),bridgeCard());
-  root.append(h("h3",{class:"sec"},"Guidance vs actual (forecast bias)"),guideCard());
+  root.append(h("h3",{class:"sec"},"Outlook vs actual"),guideCard());
   root.append(h("h3",{class:"sec"},"Risks and outlook, as stated by management"),riskBlock());
-  root.append(h("details",{style:"margin-top:26px"},h("summary",{style:"cursor:pointer;font-size:15px;font-weight:650"},"Advanced: scenario model (billings-driven, illustration only)"),h("div",{style:"margin-top:10px"},scenarioCard())));
+  root.append(h("details",{style:"margin-top:26px"},h("summary",{style:"cursor:pointer;font-size:15px;font-weight:650"},"Advanced: illustrative scenario (not a forecast)"),h("div",{style:"margin-top:10px"},scenarioCard())));
   return root;
 }
 function bridgeCard(){
@@ -323,7 +323,7 @@ function guideCard(){
     if(o.bookings_growth_pct!=null&&c.bookings_printed_growth!=null)rows.push({m:"Gross subscription sales",fy:c.fy,plan:o.bookings_growth_pct,src:o.report,act:c.bookings_printed_growth*100,flag:"Actual as printed in the FY"+c.fy+" report"});
   });
   var open=[];Y.forEach(function(c){var o=c.raw.outlook;if(o&&o.bookings_growth_text&&c.fy===FY[N-1])open.push(c)});
-  var note=h("div",{class:"note"},"Pattern: compare the sign of the gap by line. Costs that scale with bookings (store fees, marketing) tend to overshoot a plan in growth years, hiring tends to undershoot. A driver-based plan that links variable cost to the bookings forecast would remove much of that bias (inference).");
+  var note=h("div",{class:"note"},"Reading it: in growth years, costs that scale with bookings (store fees, marketing) came in above the outlook in the prior-year report, and personnel came in below it. Linking variable costs to the bookings outlook is one way to reflect this (inference).");
   return h("div",{class:"card"},h("div",{class:"scroll"},h("table",{},h("thead",{},h("tr",{},h("th",{},"Line"),h("th",{},"FY"),h("th",{class:"n"},"Guided"),h("th",{class:"n"},"Actual"),h("th",{class:"n"},"Gap (pp)"),h("th",{},"Source / note"))),
     h("tbody",{},...rows.map(function(r){var gp=r.act-r.plan,good=r.lowerBetter?gp<=0:gp>=0;return h("tr",{},h("td",{},r.m),h("td",{},"FY"+r.fy),h("td",{class:"n"},"+"+r.plan+"%"),h("td",{class:"n"},pc(r.act/100,0)),h("td",{class:"n "+(good?"up":"down")},(gp>=0?"+":"−")+Math.abs(gp).toFixed(0)),h("td",{class:"small"},r.src+(r.flag?". "+r.flag:"")));}),
       ...open.map(function(c){return h("tr",{},h("td",{},"Gross subscription sales"),h("td",{},"FY"+(c.fy+1)),h("td",{class:"n"},c.raw.outlook.bookings_growth_text),h("td",{class:"n"},"not in data yet"),h("td",{class:"n"},"–"),h("td",{class:"small"},c.raw.outlook.report+". Add FY"+(c.fy+1)+" to data/years.js to see the gap."))})))),note);
@@ -347,7 +347,7 @@ function scenarioCard(){
        h("tr",{},h("td",{},"Personnel"),h("td",{class:"n"},m1(-L.pers)),...rows.map(function(r){return h("td",{class:"n"},m1(r.pe))})),
        h("tr",{style:"font-weight:650"},h("td",{},"Operating result"),h("td",{class:"n"},m1(L.ebit)),...rows.map(function(r){return h("td",{class:"n"},m1(r.e))})),
        h("tr",{},h("td",{},"Margin on gross profit"),h("td",{class:"n"},pl(L.ebit/L.gp)),...rows.map(function(r){return h("td",{class:"n"},pl(r.m))}))))),
-     h("p",{class:"small"},"Illustration only, not a forecast and not company guidance. Defaults are calibrated to "+L.label+": fees "+pl(L.fees/L.bookings)+" and other opex "+pl((-L.opex-L.fees)/L.bookings)+" of bookings; deferred income "+pl(L.di/L.bookings)+" of bookings. Depreciation grows 20%.")
+     h("p",{class:"small"},"Illustration only, not a forecast and not company guidance. Starting values come from the filed "+L.label+" statements; the growth inputs are placeholders you can change. Defaults are calibrated to "+L.label+": fees "+pl(L.fees/L.bookings)+" and other opex "+pl((-L.opex-L.fees)/L.bookings)+" of bookings; deferred income "+pl(L.di/L.bookings)+" of bookings. Depreciation grows 20%.")
     );
   };
   var ctl=h("div",{class:"grid g4",style:"margin-bottom:10px"},
