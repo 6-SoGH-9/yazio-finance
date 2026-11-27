@@ -95,8 +95,11 @@
     ".ys .chip2 button{border:0;background:transparent;cursor:pointer;color:inherit;font-size:15px;line-height:1;padding:0 6px}" +
     ".ys .ok{color:var(--goodtxt,#1b7a3e)}.ys .bad{color:var(--crittxt,#b3261e)}.ys .wn{color:var(--warntxt,#8a5a00)}" +
     ".ys .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.ys .b{font:inherit;font-size:13px;border:1px solid var(--border,#d9e0e5);background:transparent;color:inherit;border-radius:8px;padding:5px 10px;cursor:pointer}" +
-    ".ys ul{margin:4px 0 0;padding-left:18px;font-size:12.5px;color:var(--warntxt,#8a5a00)}";
+    ".ys ul{margin:4px 0 0;padding-left:18px;font-size:12.5px;color:var(--warntxt,#8a5a00)}" +
+    ".ys .try{margin:8px 0 0}.ys a.b{display:inline-block;text-decoration:none;margin:0 2px}";
 
+  // Sample report offered to visitors who have no PDF of their own (file lives next to the page).
+  var SAMPLE_FY = 2024, SAMPLE_PDF = "samples/annual-report-fy2024.pdf";
   function el(tag, txt, cls) { var e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; }
   function download(name, text, type) { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
 
@@ -116,7 +119,14 @@
       ["dragover", "dragenter"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add("over"); }); });
       ["dragleave", "drop"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove("over"); }); });
       dz.addEventListener("drop", function (e) { add(e.dataTransfer.files); });
-      wrap.appendChild(dz); wrap.appendChild(inp); wrap.appendChild(busy);
+      wrap.appendChild(dz); wrap.appendChild(inp);
+      if (state.builtin && !state.docs[SAMPLE_FY]) {
+        var tr = el("p", "No report to hand? ", "try"), dl = el("a", "Download the FY" + SAMPLE_FY + " annual report", "b");
+        dl.href = SAMPLE_PDF; dl.setAttribute("download", SAMPLE_PDF.split("/").pop());
+        tr.appendChild(dl); tr.appendChild(document.createTextNode(" and drop it in above. It is the public filing."));
+        wrap.appendChild(tr);
+      }
+      wrap.appendChild(busy);
       var list = state.years.slice(), seen = {}; list.forEach(function (y) { seen[y.fy] = 1; });
       Object.keys(state.docs).forEach(function (k) { if (!seen[k]) list.push({ fy: +k, src: "yours", skipped: true }); });
       list.sort(function (a, b) { return a.fy - b.fy; });
