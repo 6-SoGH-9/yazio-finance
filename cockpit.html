@@ -9,17 +9,17 @@
   color-scheme:light;
   --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#6f6d67;
   --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --wash:rgba(11,11,11,.05);
-  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --good:#0ca30c; --goodtxt:#006300; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b; --crittxt:#a52a2a; --warntxt:#7a5200;
+  --s1:#1f3d63; --s2:#d98a3d; --s3:#5f8fc7; --s4:#8a93a0; --good:#0ca30c; --goodtxt:#006300; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b; --crittxt:#a52a2a; --warntxt:#7a5200;
   --accent:#184f95;
 }
 @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
   color-scheme:dark; --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#a09e96;
   --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --wash:rgba(255,255,255,.07);
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --goodtxt:#0ca30c; --crittxt:#ff8a8a; --warntxt:#fab219; --accent:#86b6ef;}}
+  --s1:#6a9bd6; --s2:#e39b52; --s3:#b3cdec; --s4:#9aa3b0; --goodtxt:#0ca30c; --crittxt:#ff8a8a; --warntxt:#fab219; --accent:#86b6ef;}}
 :root[data-theme="dark"]{
   color-scheme:dark; --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#a09e96;
   --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --wash:rgba(255,255,255,.07);
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --goodtxt:#0ca30c; --crittxt:#ff8a8a; --warntxt:#fab219; --accent:#86b6ef;}
+  --s1:#6a9bd6; --s2:#e39b52; --s3:#b3cdec; --s4:#9aa3b0; --goodtxt:#0ca30c; --crittxt:#ff8a8a; --warntxt:#fab219; --accent:#86b6ef;}
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:var(--accent)}
@@ -305,13 +305,13 @@ function bridgeCard(){
     var svg=s("svg",{viewBox:"0 0 "+W+" "+H,width:"100%",role:"img","aria-label":"Net income bridge"});
     for(var v=mnv;v<=mxv+1e-9;v+=stp)svg.append(s("line",{x1:ml,x2:W-mr,y1:y(v),y2:y(v),stroke:v===0?"var(--axis)":"var(--grid)"}),s("text",{x:ml-6,y:y(v)+4,"text-anchor":"end"},(v/1e6).toFixed(0)));
     pts.forEach(function(q,k){var x0=ml+band*k+band*.18,w=band*.64,top=y(Math.max(q.a,q.b)),hh=Math.max(1.5,Math.abs(y(q.a)-y(q.b)));
-      var col=q.tot?"var(--s1)":(q.v>=0?"var(--s3)":"var(--s2)");
+      var col=q.tot?"var(--s1)":(q.v>=0?"var(--s3)":"var(--crit)");
       var r=s("rect",{x:x0,y:top,width:w,height:hh,fill:col,rx:3,tabindex:0,"aria-label":q.n+" "+em(q.v)});
       var on=function(ev){var bb=r.getBoundingClientRect();showTip(ev.clientX?ev:{clientX:bb.left,clientY:bb.top},q.n,[{c:col,n:q.tot?"Net income":"Effect on net income",v:em(q.v)}]);};
       r.addEventListener("pointermove",on);r.addEventListener("focus",on);r.addEventListener("pointerleave",hideTip);r.addEventListener("blur",hideTip);svg.append(r);
       svg.append(s("text",{class:"lbl",x:x0+w/2,y:q.v>=0||q.tot?top-4:top+hh+11,"text-anchor":"middle"},(Math.abs(q.v)<5e4?(q.v/1e6).toFixed(2):(q.v/1e6).toFixed(1)).replace("-","−")));
       svg.append(s("text",{x:x0+w/2,y:H-24,"text-anchor":"middle"},q.n));});
-    wrap.replaceChildren(h("div",{class:"filters",style:"padding:0 0 8px"},h("label",{},"Year pair",sel),h("span",{class:"small"},"€m. Green raises net income, orange lowers it. Check: bridge sums to "+eur(chk)+" vs reported "+eur(end)+".")),svg);
+    wrap.replaceChildren(h("div",{class:"filters",style:"padding:0 0 8px"},h("label",{},"Year pair",sel),h("span",{class:"small"},"€m. Blue raises net income, red lowers it. Check: bridge sums to "+eur(chk)+" vs reported "+eur(end)+".")),svg);
   };draw();return wrap;
 }
 function guideCard(){
