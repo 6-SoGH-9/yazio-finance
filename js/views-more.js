@@ -3,7 +3,7 @@
    Everything is computed from the same year objects as the other tabs. Nothing is typed in. */
 (function () {
   "use strict";
-  var COL = ["var(--s1)", "var(--s2)", "var(--s3)", "#8a6fd1", "#c9a227", "#d6578f"];
+  var COL = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
   var m2 = function (x) { return x == null ? "n/a" : (x < 0 ? "−" : "") + (Math.abs(x) / 1e6).toFixed(2); };
   var e2 = function (x) { return x == null ? "n/a" : (x < 0 ? "−" : "") + "€" + (Math.abs(x) / 1e6).toFixed(2) + "M"; };
   var e1 = function (x) { return x == null ? "n/a" : (x < 0 ? "−" : "") + "€" + (Math.abs(x) / 1e6).toFixed(1) + "M"; };
@@ -42,7 +42,7 @@
     svg.append(s("line", { x1: X(0), x2: X(0), y1: 0, y2: H, stroke: "var(--axis)" }));
     bars.forEach(function (x, i) {
       var y = 4 + i * rowH, x0 = X(Math.min(x.a, x.b)), w = Math.max(2, Math.abs(X(x.b) - X(x.a)));
-      var col = x.t ? "var(--s1)" : x.v >= 0 ? "var(--good)" : "var(--crit)";
+      var col = x.t ? "var(--s1)" : x.v >= 0 ? "var(--s3)" : "var(--crit)";
       svg.append(s("text", { x: lw - 8, y: y + 17, "text-anchor": "end", "font-weight": x.t ? 650 : 400 }, x.n));
       var r = s("rect", { x: x0, y: y + 3, width: w, height: rowH - 10, rx: 3, fill: col, tabindex: 0, "aria-label": x.n + " " + e2(x.v) });
       var on = function (ev) { var bb = r.getBoundingClientRect(); showTip(ev.clientX ? ev : { clientX: bb.left, clientY: bb.top }, x.n, [{ c: col, n: x.t ? "Total" : "Effect", v: e2(x.v) }]); };
