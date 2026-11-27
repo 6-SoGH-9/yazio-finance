@@ -80,7 +80,7 @@
 
     root.append(h("div", { class: "grid", style: "grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));margin-top:14px" },
       chartCard("Liquidity vs deferred income", "€m. Cash plus securities against what customers prepaid.", { cats: cats, series: [{ name: "Cash + securities", color: COL[0], values: Y.map(function (x) { return (x.cash + x.sec) / 1e6; }) }, { name: "Deferred income", color: COL[1], values: Y.map(function (x) { return x.di / 1e6; }) }], fmt: function (v) { return "€" + v.toFixed(1) + "M"; }, axis: function (v) { return v.toFixed(0); } }),
-      chartCard("Net income vs dividends paid", "€m. Dividends from the equity roll-forward.", { cats: cats, series: [{ name: "Net income", color: COL[0], values: Y.map(function (x) { return x.ni / 1e6; }) }, { name: "Paid in year", color: COL[2], values: Y.map(function (x) { return x.dividends / 1e6; }) }], fmt: function (v) { return "€" + v.toFixed(2) + "M"; }, axis: function (v) { return v.toFixed(1); } })));
+      chartCard("Net income vs dividends paid", "€m. Dividends from the equity roll-forward.", { cats: cats, series: [{ name: "Net income", color: COL[0], values: Y.map(function (x) { return x.ni / 1e6; }) }, { name: "Paid in year", color: COL[1], values: Y.map(function (x) { return x.dividends / 1e6; }) }], fmt: function (v) { return "€" + v.toFixed(2) + "M"; }, axis: function (v) { return v.toFixed(1); } })));
 
     var owc = c.ocf - c.ni + c.dep - (c.di - priDI);   // dep is negative in the data
     root.append(h("div", { class: "grid", style: "grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));margin-top:14px" },
