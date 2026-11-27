@@ -106,7 +106,7 @@
     var rows = S[VX.stmt].map(function (d) {
       var isP = d[3] === "pct", f = function (x) { var v = d[1](x); return isP ? pl(v) : m2(v); }, chg = "–", cls = "";
       if (j > 0) { var a = d[1](Y[j]), b = d[1](Y[j - 1]);
-        if (a != null && b != null) { var dl = a - b; cls = !d[2] || dl === 0 ? "" : dl > 0 ? "up" : "down"; chg = isP ? (dl >= 0 ? "+" : "−") + Math.abs(dl * 100).toFixed(1) + " pts" : (dl >= 0 ? "+" : "−") + m2(Math.abs(dl)) + (b > 0 ? " (" + pc(dl / b, 0) + ")" : ""); } }
+        if (a != null && b != null) { var dl = a - b; cls = !d[2] || dl === 0 ? "" : dl > 0 ? "up" : "down"; chg = isP ? (dl >= 0 ? "+" : "−") + Math.abs(dl * 100).toFixed(1) + " pts" : (Math.abs(dl) < 5000 ? "–" : (dl >= 0 ? "+" : "−") + m2(Math.abs(dl)) + (b > 0 && Math.abs(dl / b) <= 9.99 ? " (" + pc(dl / b, 0) + ")" : "")); } }
       return h("tr", { style: d[3] === "tot" ? "font-weight:650" : "" }, h("td", {}, d[0]), Y.map(function (x) { return h("td", { class: "n" }, f(x)); }), h("td", { class: "n " + cls }, chg));
     });
     return card("Financial statements, €m", "Change column: selected year against the year before. Green is favourable, red unfavourable, plain is neutral. Cash flow is derived (no cash flow statement is published).",
