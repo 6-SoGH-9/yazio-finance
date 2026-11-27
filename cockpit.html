@@ -95,7 +95,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
   <div class="filters" id="filters"></div>
  </div>
 </header>
-<section class="wrap" id="datapanel"></section>
+<section class="wrap" id="datawrap"><button class="btn" id="datatoggle" aria-expanded="false" style="margin:10px 0 0"></button><div id="datapanel" hidden style="margin-top:10px"></div></section>
 <main class="wrap" id="main"></main>
 <footer class="wrap">
  Sources: YAZIO GmbH annual financial statements (HGB, Unternehmensregister extracts).
@@ -106,6 +106,7 @@ footer{color:var(--muted);font-size:12px;padding:20px 0 40px}
 <script src="js/vendor/pdf.min.js"></script>
 <script src="data/years.js"></script>
 <script src="js/calc.js"></script>
+<script src="js/views-more.js"></script>
 <script src="js/extract-core.js"></script>
 <script src="js/store.js"></script>
 <script>
@@ -114,6 +115,11 @@ var CALC=window.YAZIO_CALC,fm=CALC.fmt;
 var qs=new URLSearchParams(location.search);
 var DS=window.YAZIO_STORE.init(window.YAZIO_DATA);
 window.YAZIO_STORE.mount(document.getElementById("datapanel"),DS);
+(function(){var pnl=document.getElementById("datapanel"),btn=document.getElementById("datatoggle"),key="yazio.panel.open",open=!DS.data;
+  try{if(sessionStorage.getItem(key)==="1")open=true;}catch(e){}
+  var n=DS.years?DS.years.length:0,own=DS.source==="stored";
+  var set=function(o){open=o;pnl.hidden=!o;btn.setAttribute("aria-expanded",String(o));btn.textContent=(o?"▾ ":"▸ ")+"Add or manage statements"+(n?" · "+n+" year"+(n>1?"s":"")+(own?" (your PDFs)":" (example data)"):"");try{sessionStorage.setItem(key,o?"1":"0");}catch(e){}};
+  btn.onclick=function(){set(!open);};set(open);})();
 if(!DS.data){document.getElementById("asof").textContent="";throw new Error("no data yet");}
 var LD=CALC.load(DS.data,{from:+qs.get("from")||0,to:+qs.get("to")||0});
 var Y=LD.years,N=Y.length;
@@ -150,7 +156,7 @@ function tableView(sp){
    h("tbody",{},...sp.cats.map(function(c,i){return h("tr",{},h("td",{},c),...sp.series.map(function(x){return h("td",{class:"n"},x.values[i]==null?"n/a":sp.fmt(x.values[i]))}))}))));
 }
 function plot(sp){
-  var W=620,H=sp.height||250,ml=48,mr=14,mt=12,mb=26,wrap=h("div",{});
+  var W=Math.min(620,Math.max(300,innerWidth-64)),H=sp.height||250,ml=48,mr=14,mt=12,mb=26,wrap=h("div",{});
   if(sp.series.length>1)wrap.append(h("div",{class:"legend"},...sp.series.map(function(x){return h("span",{},h("i",{style:"background:"+x.color+(sp.type==="line"?";height:3px;vertical-align:3px":"")}),x.name)})));
   var all=[].concat.apply([],sp.series.map(function(x){return x.values.filter(function(v){return v!=null})}));
   var mx=Math.max.apply(null,[0].concat(all)),mn=Math.min.apply(null,[0].concat(all));
@@ -192,7 +198,7 @@ function slider(label,min,max,stp,val,f,onc){
 
 /* ---------- state and data accessors ---------- */
 var FY=Y.map(function(c){return c.fy});
-var st={role:"cfo",from:FY[0],to:FY[N-1],basis:"comparable",gy:null,bridgeY:FY[N-1],ctrlFilter:"All",rebate:false,preM:5,preType:"All",obsSev:"All",sc:null};
+var st={role:"overview",from:FY[0],to:FY[N-1],basis:"comparable",gy:null,bridgeY:FY[N-1],ctrlFilter:"All",rebate:false,preM:5,preType:"All",obsSev:"All",sc:null};
 var idx=function(){return Y.map(function(c,i){return i}).filter(function(i){return FY[i]>=st.from&&FY[i]<=st.to})};
 var cats=function(){return idx().map(function(i){return Y[i].short})};
 var gpB=function(c){return st.basis==="comparable"?c.gp:c.gp_filed};
@@ -202,41 +208,27 @@ var cover=function(c){return (c.cash+c.sec)/c.di};
 var curYear=function(){return Y[idx().slice(-1)[0]]};
 
 /* ---------- filter bar ---------- */
+var BASISNOTE="Gross profit (Rohergebnis), basis: comparable, app-store fees in other operating expenses in every year.";
 function buildFilters(){
   var f=$("#filters");f.replaceChildren();
   var sel=function(v,onc){var e=h("select",{},...FY.map(function(o){return h("option",{value:o},o)}));e.value=v;e.onchange=function(){onc(+e.value)};return e;};
-  if(st.role==="cfo"||st.role==="fpa"||st.role==="ratios"){
+  if(st.role==="overview"){f.append(h("span",{class:"small"},"Pick the fiscal year inside the page. "+BASISNOTE));}
+  else if(st.role==="analysis"||st.role==="data"){
     f.append(h("label",{},"From FY",sel(st.from,function(v){st.from=Math.min(v,st.to);render();})),h("label",{},"To FY",sel(st.to,function(v){st.to=Math.max(v,st.from);render();})));
+    if(st.role==="data"){f.append(h("span",{class:"small"},BASISNOTE));return;}
     var b=h("button",{class:"chip","aria-pressed":st.basis==="comparable",title:"Until FY2021 the app-store fees were netted inside gross profit; from FY2022 they are in other operating expenses. Comparable basis adds them back for the earlier years. EBIT and net income do not change."},st.basis==="comparable"?"Comparable (fees in other opex)":"As filed");
     b.onclick=function(){st.basis=st.basis==="comparable"?"filed":"comparable";render();};f.append(h("label",{},"Basis",b));
   }
 }
 
 /* ---------- CFO ---------- */
-function viewCFO(){
-  var I=idx(),L=Y[I[I.length-1]],pi=I[I.length-1]-1,P=pi>=0?Y[pi]:null,root=h("div",{});
-  var gg=I[I.length-1]>0?gpGrowthB(I[I.length-1]):null;
-  root.append(h("div",{class:"grid g4"},
-    kpi("Gross profit (Rohergebnis)"+(st.basis==="comparable"?", fees in other opex":", as filed"),em(gpB(L)),P?delta(gg):""),
-    kpi("Operating result (EBIT)",em(L.ebit),h("span",{},pl(L.ebit/gpB(L))+" of gross profit")),
-    kpi("Net income",em(L.ni),P?delta(P.ni?L.ni/P.ni-1:null):""),
-    kpi("Cash + securities",em(L.cash+L.sec),h("span",{},cover(L).toFixed(2)+"× deferred income")),
-    kpi("Deferred income",em(L.di),h("span",{},pl(L.di/L.ta,0)+" of balance sheet")),
-    kpi("Equity ratio",pl(L.r.equity_ratio,0),h("span",{},em(L.equity)+" equity")),
-    kpi("Headcount (avg)",String(L.head),h("span",{},"€"+(gpB(L)/L.head/1000).toFixed(0)+"k gross profit per head")),
-    kpi("Effective tax rate",pl(L.r.tax_rate),h("span",{},"on pre-tax "+em(L.ebt)))));
-  if(P)root.append(h("div",{class:"note"},"Reading the profit: YAZIO collects cash up front and recognises revenue over the subscription term, but pays store fees and marketing immediately. In a growth year, profit therefore lags bookings. Deferred income "+(L.di>=P.di?"rose ":"fell ")+em(Math.abs(L.di-P.di))+" in "+L.label+", which is why a "+pc(gg,0)+" move in gross profit sits beside a net income of "+em(L.ni)+"."));
-  root.append(h("h3",{class:"sec"},"Trend"),h("div",{class:"grid g2"},
-    chartCard("Gross profit"+(st.basis==="comparable"?" (fees in other opex)":", as filed"),"€m, HGB, total-cost method",{cats:cats(),series:[{name:"Gross profit",color:"var(--s1)",values:I.map(function(i){return gpB(Y[i])/1e6})}],fmt:function(v){return "€"+v.toFixed(1)+"m"},axis:function(v){return v.toFixed(0)},labels:true}),
-    chartCard("Operating result vs net income","€m. Net income falls short of operating result by tax.",{cats:cats(),series:[{name:"Operating result",color:"var(--s1)",values:I.map(function(i){return Y[i].ebit/1e6})},{name:"Net income",color:"var(--s2)",values:I.map(function(i){return Y[i].ni/1e6})}],fmt:function(v){return "€"+v.toFixed(2)+"m"},axis:function(v){return v.toFixed(0)},labels:true}),
-    chartCard("Liquidity vs deferred income","€m. Cash plus securities against what customers prepaid.",{cats:cats(),series:[{name:"Cash + securities",color:"var(--s1)",values:I.map(function(i){return (Y[i].cash+Y[i].sec)/1e6})},{name:"Deferred income",color:"var(--s2)",values:I.map(function(i){return Y[i].di/1e6})}],fmt:function(v){return "€"+v.toFixed(1)+"m"},axis:function(v){return v.toFixed(0)},labels:true}),
-    chartCard("Net income vs dividends paid","€m. Dividends from the equity roll-forward.",{cats:cats(),series:[{name:"Net income",color:"var(--s1)",values:I.map(function(i){return Y[i].ni/1e6})},{name:"Paid in year",color:"var(--s3)",values:I.map(function(i){return Y[i].dividends/1e6})}],fmt:function(v){return "€"+v.toFixed(2)+"m"},axis:function(v){return v.toFixed(1)},labels:true})));
-  root.append(h("h3",{class:"sec"},"Growth check: which growth rate, which definition?"),growthCheck());
+function riskBlock(){
+  var root=h("div",{});
   /* outlook from the report of the latest year that states one */
   var ov=null;Y.slice().reverse().some(function(c){if(c.raw.outlook&&(c.raw.outlook.bookings_growth_text||c.raw.outlook.bookings_growth_pct!=null)){ov=c;return true}});
   var lbk=Y.filter(function(c){return c.bookings!=null}).slice(-2);
   var feeLine=lbk.length===2?"Transaction cost rate on bookings moved from "+pl(lbk[0].fees/lbk[0].bookings)+" to "+pl(lbk[1].fees/lbk[1].bookings)+" in "+lbk[1].label+" (inference from rounded figures; mix or tier changes are one possible cause).":"";
-  root.append(h("h3",{class:"sec"},"Risks and outlook, as stated by management"),h("div",{class:"grid g2"},
+  root.append(h("div",{class:"grid g2"},
     h("div",{class:"card"},h("h2",{},"Risk ratings",h("span",{class:"stale"},"FY2024 report")),h("table",{},h("tbody",{},
       h("tr",{},h("td",{},"AI and competition (earnings)"),h("td",{},tag("High","crit"))),
       h("tr",{},h("td",{},"Fair-consumer-contracts law, cancellation button"),h("td",{},tag("Low (no effect seen yet)","good"))),
@@ -277,13 +269,8 @@ function growthCheck(){
 }
 
 /* ---------- FP&A ---------- */
-function viewFPA(){
-  var I=idx(),L=Y[I[I.length-1]],i=I[I.length-1],P=i>0?Y[i-1]:null,root=h("div",{});
-  root.append(h("div",{class:"grid g4"},
-    kpi("Personnel cost / gross profit",pl(-L.pers/gpB(L)),L.label),
-    kpi("Other opex / gross profit",pl(-opexB(L)/gpB(L),0),L.label+(st.basis==="filed"&&!L.fees_in_gp?" incl. store fees":"")),
-    kpi("Store fees / bookings",L.bookings!=null?pl(L.fees/L.bookings):"n/a","where the report gives a usable bookings figure"),
-    kpi("Personnel cost per head",eur(-L.pers/L.head),P?delta(L.pers/P.pers/(L.head/P.head)-1):"")));
+function viewAnalysis(){
+  var I=idx(),root=h("div",{});
   root.append(h("h3",{class:"sec"},"Cost structure"),h("div",{class:"grid g2"},
     chartCard("Cost ratios, % of gross profit","Operating margin is what is left."+(st.basis==="filed"?" Years before FY2022 are not comparable as filed.":""),{cats:cats(),series:[
       {name:"Personnel",color:"var(--s1)",values:I.map(function(j){return -Y[j].pers/gpB(Y[j])*100})},
@@ -292,9 +279,11 @@ function viewFPA(){
     chartCard("Productivity","Gross profit and personnel cost per average employee, €K.",{cats:cats(),series:[
       {name:"Gross profit per head",color:"var(--s1)",values:I.map(function(j){return gpB(Y[j])/Y[j].head/1000})},
       {name:"Personnel cost per head",color:"var(--s2)",values:I.map(function(j){return -Y[j].pers/Y[j].head/1000})}],fmt:function(v){return "€"+v.toFixed(0)+"k"},axis:function(v){return v.toFixed(0)},labels:true})));
+  root.append(h("h3",{class:"sec"},"Growth check: which growth rate, which definition?"),growthCheck());
   root.append(h("h3",{class:"sec"},"Result bridge"),bridgeCard());
   root.append(h("h3",{class:"sec"},"Guidance vs actual (forecast bias)"),guideCard());
-  root.append(h("h3",{class:"sec"},"Scenario: billings-driven model"),scenarioCard());
+  root.append(h("h3",{class:"sec"},"Risks and outlook, as stated by management"),riskBlock());
+  root.append(h("details",{style:"margin-top:26px"},h("summary",{style:"cursor:pointer;font-size:15px;font-weight:650"},"Advanced: scenario model (billings-driven, illustration only)"),h("div",{style:"margin-top:10px"},scenarioCard())));
   return root;
 }
 function bridgeCard(){
@@ -305,11 +294,11 @@ function bridgeCard(){
     var i=FY.indexOf(st.bridgeY),p=i-1,a=Y[i],b=Y[p],ia=a.raw.income,ib=b.raw.income;
     var sel=h("select",{"aria-label":"Bridge year"},...FY.slice(1).map(function(v){return h("option",{value:v},"FY"+(v-1)+" → FY"+v)}));sel.value=st.bridgeY;sel.onchange=function(){st.bridgeY=+sel.value;draw();};
     var sum=function(x){return x.income_securities+x.other_interest_income+x.interest_expense};
-    var steps=[{n:"Gross result",v:ia.gross_profit-ib.gross_profit},{n:"Staff",v:ia.personnel-ib.personnel},{n:"Deprec.",v:ia.depreciation-ib.depreciation},{n:"Other opex",v:ia.other_opex-ib.other_opex},
+    var steps=[{n:"Gross profit",v:ia.gross_profit-ib.gross_profit},{n:"Staff",v:ia.personnel-ib.personnel},{n:"Deprec.",v:ia.depreciation-ib.depreciation},{n:"Other opex",v:ia.other_opex-ib.other_opex},
       {n:"Fin. result",v:sum(ia)-sum(ib)},{n:"Income tax",v:ia.income_tax-ib.income_tax},{n:"Other tax",v:ia.other_taxes-ib.other_taxes}];
     var start=ib.net_income,end=ia.net_income,chk=start+steps.reduce(function(x,q){return x+q.v},0);
     var items=[{n:b.short+" NI",v:start,tot:true}].concat(steps,[{n:a.short+" NI",v:end,tot:true}]);
-    var W=620,H=260,ml=48,mr=10,mt=14,mb=44,run=0;
+    var W=Math.min(620,Math.max(300,innerWidth-64)),H=260,ml=48,mr=10,mt=14,mb=44,run=0;
     var pts=items.map(function(x){if(x.tot){run=x.v;return Object.assign({},x,{a:0,b:x.v});}var s0=run;run+=x.v;return Object.assign({},x,{a:s0,b:run});});
     var lo=Math.min.apply(null,[0].concat(pts.map(function(q){return Math.min(q.a,q.b)}))),hi=Math.max.apply(null,pts.map(function(q){return Math.max(q.a,q.b)}));
     var stp=nice((hi-lo)*1.08/4),mxv=Math.ceil(hi/stp)*stp,mnv=lo<0?Math.floor(lo/stp)*stp:0,iw=W-ml-mr,ih=H-mt-mb,y=function(v){return mt+ih*(1-(v-mnv)/(mxv-mnv))},band=iw/items.length;
@@ -375,8 +364,9 @@ function scenarioCard(){
 }
 
 /* ---------- Ratios and checks ---------- */
-function viewRatios(){
+function viewData(){
   var I=idx(),root=h("div",{});
+  root.append(window.YAZIO_VIEWS.statements());
   var rows=[];
   CALC.RATIOS.forEach(function(g){rows.push(h("tr",{class:"grp"},h("td",{colspan:I.length+1},g[0])));
     g[1].forEach(function(r){rows.push(h("tr",{},h("td",{},r[0]),...I.map(function(i){return h("td",{class:"n"},fm.ratio(CALC.pick(Y[i],r[1]),r[2]))})));});});
@@ -393,14 +383,17 @@ function viewRatios(){
 }
 
 /* ---------- shell ---------- */
-var ROLES=[["cfo","CFO"],["fpa","FP&A"],["ratios","Ratios and checks"]];
+var ROLES=[["overview","Overview"],["analysis","Analysis"],["data","Data and checks"]];
 function render(){
   $("#asof").textContent="Statutory data "+FY[0]+(N>1?"–"+FY[N-1]:"")+" · "+N+" year"+(N>1?"s":"")+" loaded";
   $("#tabs").replaceChildren(...ROLES.map(function(r){var b=h("button",{class:"tab",role:"tab","aria-selected":st.role===r[0]},r[1]);b.onclick=function(){st.role=r[0];render();scrollTo(0,0);};return b;}));
   buildFilters();
-  $("#main").replaceChildren(({cfo:viewCFO,fpa:viewFPA,ratios:viewRatios})[st.role]());
+  var body;try{body=({overview:window.YAZIO_VIEWS.overview,analysis:viewAnalysis,data:viewData})[st.role]();}catch(err){console.error(err);body=h("div",{class:"note warn"},"This tab needs at least two years of statements. Add another year above.");}
+  $("#main").replaceChildren(window.YAZIO_VIEWS.takeaway(st.role),body);
 }
 $("#theme").onclick=function(){var r=document.documentElement,cur=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");r.setAttribute("data-theme",cur==="dark"?"light":"dark");};
+var lastW=innerWidth<640;
+addEventListener("resize",function(){var nw=innerWidth<640;clearTimeout(window.__rz);window.__rz=setTimeout(function(){if(nw!==lastW||nw){lastW=nw;render();}},250);});
 render();
 </script>
 </body>
